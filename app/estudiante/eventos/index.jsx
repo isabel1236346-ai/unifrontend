@@ -35,8 +35,7 @@ const COLORS = {
   white: '#FFFFFF',
 };
 
-const API_BASE_URL = 'https://backendgestion-production-e2aa.up.railway.app';
-const TOKEN_KEY = 'studentAuthToken';
+const API_BASE_URL = 'https://unibackend-production.up.railway.app';const TOKEN_KEY = 'studentAuthToken';
 
 const getToken = async () => {
   try {

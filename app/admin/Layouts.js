@@ -19,8 +19,7 @@ import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
-const API_BASE_URL = 'https://backendgestion-production-e2aa.up.railway.app';
-
+const API_BASE_URL = 'https://unibackend-production.up.railway.app';
 // Misma paleta que InventarioDAF.js para mantener consistencia visual
 const C = {
   primary: '#E95A0C', primaryLight: '#FFF0E6',

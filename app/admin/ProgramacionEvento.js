@@ -13,8 +13,7 @@ import { Calendar, LocaleConfig } from 'react-native-calendars';
 import dayjs from 'dayjs';
 import * as SecureStore from 'expo-secure-store';
 
-const API_BASE_URL = 'https://backendgestion-production-e2aa.up.railway.app';
-const TOKEN_KEY = 'adminAuthToken';
+const API_BASE_URL = 'https://unibackend-production.up.railway.app';const TOKEN_KEY = 'adminAuthToken';
 
 const parseDateLocal = (dateInput) => {
   if (!dateInput) return new Date();
