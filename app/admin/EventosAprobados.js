@@ -170,14 +170,6 @@ const formatSubmittedDate = (date) => {
   return `Hace ${days} día${days > 1 ? 's' : ''}`;
 };
 
-const isEventPast = (dateStr) => {
-  if (!dateStr) return true;
-  const eventDate = parseEventDate(dateStr);
-  const today = new Date();
-  eventDate.setHours(0, 0, 0, 0);
-  today.setHours(0, 0, 0, 0);
-  return eventDate < today;
-};
 
 
 const getFacultyColor = (facultyName) => {
