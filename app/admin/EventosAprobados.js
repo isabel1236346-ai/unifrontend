@@ -61,13 +61,13 @@ const deleteTokenAsync = async () => {
 
 const parseEventDate = (dateStr) => {
   if (!dateStr) return new Date(0);
-  if (dateStr instanceof Date) return dateStr;
+  if (dateStr instanceof Date && !isNaN(dateStr.getTime())) return dateStr;
   
-  if (typeof dateStr === 'string' && dateStr.includes('-')) {
-    const parsed = new Date(dateStr);
-    if (!isNaN(parsed.getTime())) return parsed;
-  }
+  // Intentar parsear como string ISO (ej: "2026-08-12T15:00:00.000Z") o formato estándar
+  const parsed = new Date(dateStr);
+  if (!isNaN(parsed.getTime())) return parsed;
   
+  // Fallback para formato DD/MM/YYYY
   if (typeof dateStr === 'string' && dateStr.includes('/')) {
     const parts = dateStr.split('/');
     if (parts.length === 3) {
@@ -78,39 +78,43 @@ const parseEventDate = (dateStr) => {
     }
   }
   
-  const fallback = new Date(dateStr);
-  return isNaN(fallback.getTime()) ? new Date(0) : fallback;
+  return new Date(0); // Fecha inválida
 };
 
-const formatSubmittedDate = (date) => {
-  const now = new Date();
-  const submittedDate = new Date(date);
-  const diff = Math.floor((now - submittedDate) / 1000);
-  if (diff < 3600) return `Hace ${Math.floor(diff / 60)} min`;
-  if (diff < 86400) return `Hace ${Math.floor(diff / 3600)} h`;
-  const days = Math.floor(diff / 86400);
-  return `Hace ${days} día${days > 1 ? 's' : ''}`;
-};
-
-const isEventPast = (dateStr) => {
-  if (!dateStr) return true;
+const isEventPast = (event) => {
+  // Priorizar fechaevento (ISO) sobre date (formateada), o viceversa
+  const dateStr = event.fechaevento || event.date;
+  if (!dateStr) return true; // Si no hay fecha, lo consideramos pasado por seguridad
+  
   const eventDate = parseEventDate(dateStr);
   const today = new Date();
+  
+  // Normalizar a medianoche para comparar solo días
   eventDate.setHours(0, 0, 0, 0);
   today.setHours(0, 0, 0, 0);
-  return eventDate < today;
+  
+  const isPast = eventDate < today;
+  console.log(`📅 [FECHA] Evento: "${event.title || event.nombreevento}" | Fecha: ${dateStr} | ¿Es pasado?: ${isPast}`);
+  
+  return isPast;
 };
 
 const groupEventsByStatusAndFaculty = (events) => {
-  const activos = events.filter(e => !isEventPast(e.date));
-  const pasados = events.filter(e => isEventPast(e.date));
+  console.log('🔄 [AGRUPANDO] Total de eventos a procesar:', events.length);
   
+  // Usar la función isEventPast corregida que acepta el objeto completo
+  const activos = events.filter(e => !isEventPast(e));
+  const pasados = events.filter(e => isEventPast(e));
+  
+  console.log(`📊 [AGRUPANDO] Activos: ${activos.length} | Pasados: ${pasados.length}`);
+
   const sections = [];
   
   if (activos.length > 0) {
     const groupedActivos = {};
     activos.forEach(event => {
-      const faculty = event.faculty || 'Sin facultad';
+      // El backend puede enviar 'faculty' o 'facultad'
+      const faculty = event.faculty || event.facultad || 'Sin facultad';
       if (!groupedActivos[faculty]) groupedActivos[faculty] = [];
       groupedActivos[faculty].push(event);
     });
@@ -133,7 +137,7 @@ const groupEventsByStatusAndFaculty = (events) => {
   if (pasados.length > 0) {
     const groupedPasados = {};
     pasados.forEach(event => {
-      const faculty = event.faculty || 'Sin facultad';
+      const faculty = event.faculty || event.facultad || 'Sin facultad';
       if (!groupedPasados[faculty]) groupedPasados[faculty] = [];
       groupedPasados[faculty].push(event);
     });
@@ -156,6 +160,26 @@ const groupEventsByStatusAndFaculty = (events) => {
   return sections;
 };
 
+const formatSubmittedDate = (date) => {
+  const now = new Date();
+  const submittedDate = new Date(date);
+  const diff = Math.floor((now - submittedDate) / 1000);
+  if (diff < 3600) return `Hace ${Math.floor(diff / 60)} min`;
+  if (diff < 86400) return `Hace ${Math.floor(diff / 3600)} h`;
+  const days = Math.floor(diff / 86400);
+  return `Hace ${days} día${days > 1 ? 's' : ''}`;
+};
+
+const isEventPast = (dateStr) => {
+  if (!dateStr) return true;
+  const eventDate = parseEventDate(dateStr);
+  const today = new Date();
+  eventDate.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+  return eventDate < today;
+};
+
+
 const getFacultyColor = (facultyName) => {
   const colors = [
     '#E91E63', '#9C27B0', '#673AB7', '#3F51B5', '#2196F3',
@@ -171,7 +195,7 @@ const EventosAprobadosPorFacultad = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchApprovedEventsByFaculty = useCallback(async () => {
+   const fetchApprovedEventsByFaculty = useCallback(async () => {
     try {
       const token = await getTokenAsync();
       
@@ -188,10 +212,13 @@ const EventosAprobadosPorFacultad = () => {
         },
       });
 
-      setEvents(response.data);
+      console.log('📦 [API RESPONSE] Datos crudos del backend:', response.data);
+      console.log('📦 [API RESPONSE] Cantidad de eventos recibidos:', response.data?.length || 0);
+
+      setEvents(response.data || []);
 
     } catch (error) {
-      console.error('❌ Error:', error);
+      console.error('❌ Error al cargar eventos:', error);
       
       if (error.response?.status === 401 || error.response?.status === 403) {
         await deleteTokenAsync();
@@ -201,7 +228,7 @@ const EventosAprobadosPorFacultad = () => {
         return;
       }
 
-      Alert.alert('Error', 'No se pudieron cargar los eventos.');
+      Alert.alert('Error', 'No se pudieron cargar los eventos. Revisa la consola.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -224,13 +251,15 @@ const EventosAprobadosPorFacultad = () => {
     });
   };
 
-  const renderEventItem = ({ item }) => {
-    if (!item || typeof item !== 'object' || typeof item.id === 'undefined') {
+    const renderEventItem = ({ item }) => {
+    if (!item || typeof item !== 'object' || (!item.id && !item.idevento)) {
       return null;
     }
 
-    const isPast = isEventPast(item.date);
-    const facultyColor = getFacultyColor(item._facultyGroup || item.faculty || 'Sin facultad');
+    const eventId = item.id || item.idevento;
+    const isPast = isEventPast(item);
+    const facultyName = item._facultyGroup || item.faculty || item.facultad || 'Sin facultad';
+    const facultyColor = getFacultyColor(facultyName);
     
     return (
       <TouchableOpacity
@@ -251,17 +280,20 @@ const EventosAprobadosPorFacultad = () => {
                 style={[styles.eventTitle, isPast && styles.eventTitlePast]} 
                 numberOfLines={2}
               >
-                {item.title}
+                {/* Fallback para el título */}
+                {item.title || item.nombreevento || 'Sin título'}
               </Text>
               <View style={styles.idBadge}>
-                <Text style={styles.idText}>#{item.id}</Text>
+                <Text style={styles.idText}>#{eventId}</Text>
               </View>
             </View>
             
             <View style={styles.badgeContainer}>
               <View style={[styles.monthBadge, { backgroundColor: COLORS.blue }]}>
                 <Ionicons name="calendar" size={12} color={COLORS.white} />
-                <Text style={styles.monthBadgeText}>Del mes próximo</Text>
+                <Text style={styles.monthBadgeText}>
+                  {isPast ? 'Finalizado' : 'Próximo'}
+                </Text>
               </View>
             </View>
           </View>
@@ -269,22 +301,29 @@ const EventosAprobadosPorFacultad = () => {
           <View style={styles.infoGrid}>
             <View style={styles.infoRow}>
               <Ionicons name="calendar-outline" size={14} color={isPast ? COLORS.grayMedium : COLORS.grayText} />
-              <Text style={[styles.infoText, isPast && styles.infoTextPast]}>{item.date}</Text>
+              {/* Fallback para la fecha */}
+              <Text style={[styles.infoText, isPast && styles.infoTextPast]}>
+                {item.date || (item.fechaevento ? new Date(item.fechaevento).toLocaleDateString('es-ES') : 'N/A')}
+              </Text>
             </View>
             <View style={styles.infoRow}>
               <Ionicons name="time-outline" size={14} color={isPast ? COLORS.grayMedium : COLORS.grayText} />
-              <Text style={[styles.infoText, isPast && styles.infoTextPast]}>{item.time}</Text>
+              <Text style={[styles.infoText, isPast && styles.infoTextPast]}>{item.time || item.horaevento || 'N/A'}</Text>
             </View>
           </View>
 
           <View style={styles.infoGrid}>
             <View style={styles.infoRow}>
               <Ionicons name="location-outline" size={14} color={isPast ? COLORS.grayMedium : COLORS.grayText} />
-              <Text style={[styles.infoText, isPast && styles.infoTextPast]} numberOfLines={1}>{item.location}</Text>
+              <Text style={[styles.infoText, isPast && styles.infoTextPast]} numberOfLines={1}>
+                {item.location || item.lugarevento || 'N/A'}
+              </Text>
             </View>
             <View style={styles.infoRow}>
               <Ionicons name="person-outline" size={14} color={isPast ? COLORS.grayMedium : COLORS.grayText} />
-              <Text style={[styles.infoText, isPast && styles.infoTextPast]} numberOfLines={1}>{item.organizer}</Text>
+              <Text style={[styles.infoText, isPast && styles.infoTextPast]} numberOfLines={1}>
+                {item.organizer || item.responsable_evento || 'N/A'}
+              </Text>
             </View>
           </View>
 
@@ -294,9 +333,11 @@ const EventosAprobadosPorFacultad = () => {
               <Text style={[styles.phaseText, isPast && styles.infoTextPast]}>Fase {item.idfase || 1}</Text>
             </View>
             <View style={styles.submissionInfo}>
-              <Text style={[styles.submittedBy, isPast && styles.infoTextPast]}>{item.submittedBy}</Text>
+              <Text style={[styles.submittedBy, isPast && styles.infoTextPast]}>
+                {item.submittedBy || item.organizador || 'Sistema'}
+              </Text>
               <Text style={[styles.submittedDate, isPast && styles.infoTextPast]}>
-                {formatSubmittedDate(item.submittedDate)}
+                {formatSubmittedDate(item.submittedDate || item.created_at || item.fechaevento)}
               </Text>
             </View>
           </View>
