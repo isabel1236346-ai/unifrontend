@@ -481,13 +481,15 @@ const [telegramUsername, setTelegramUsername] = useState('');
 
 const currentMonthEvents = useMemo(() => {
   const now = new Date();
-  const currentMonth = now.getMonth(); // 0-11
-  const currentYear = now.getFullYear();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
   return comiteeEvents.filter(e => {
-    if (!e.fechaevento) return false; // Excluye eventos sin fecha definida
+    if (!e.fechaevento) return false; 
+    
     const eventDate = new Date(e.fechaevento);
-    return eventDate.getMonth() === currentMonth && eventDate.getFullYear() === currentYear;
+    const eventDay = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+    
+    return eventDay >= today;
   });
 }, [comiteeEvents]);
 
