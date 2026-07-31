@@ -1452,59 +1452,58 @@ const handleActionPress = (action) => {
       />
 
      
-      {!isBannerExpanded && (
-        <TouchableOpacity
-          style={{
-            position: 'absolute', bottom: 78, right: 20,
-            width: 56, height: 56, borderRadius: 28,
-            backgroundColor: COLORS.primary,
-            justifyContent: 'center', alignItems: 'center',
-            elevation: 8, shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.25, shadowRadius: 6,
-          }}
-          onPress={() => setIsChatOpen(true)}>
-          <Ionicons name="chatbubble-ellipses" size={24} color={COLORS.white} />
-        </TouchableOpacity>
-      )}
+      {!isBannerExpanded && userProfile.id && (
+  <TouchableOpacity
+    style={{
+      position: 'absolute', bottom: 78, right: 20,
+      width: 56, height: 56, borderRadius: 28,
+      backgroundColor: COLORS.primary,
+      justifyContent: 'center', alignItems: 'center',
+      elevation: 8, shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.25, shadowRadius: 6,
+    }}
+    onPress={() => setIsChatOpen(true)}
+  >
+    <Ionicons name="chatbubble-ellipses" size={24} color={COLORS.white} />
+  </TouchableOpacity>
+)}
 
-      {/* ── CHAT MODAL ── */}
-      {isChatOpen && (
-        <View style={{
-          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-start',
-          paddingTop: StatusBar.currentHeight || 0, zIndex: 2000,
-        }}>
-          <View style={{
-            width: '88%', maxWidth: 400, height: '85%',
-            backgroundColor: '#F4F7F9',
-            borderTopRightRadius: 20, borderBottomRightRadius: 20,
-            marginLeft: 'auto', elevation: 10,
-          }}>
-            <View style={{
-              flexDirection: 'row', justifyContent: 'space-between',
-              alignItems: 'center', paddingHorizontal: 16, paddingVertical: 13,
-              backgroundColor: COLORS.surface, borderBottomWidth: 1,
-              borderColor: COLORS.border, borderTopRightRadius: 20,
-            }}>
-              <Text style={{ fontSize: 18, fontWeight: '700', color: COLORS.textPrimary }}>
-                Chat General
-              </Text>
-             <TouchableOpacity onPress={() => setIsChatOpen(false)} style={{ padding: 6 }}>
-                <Ionicons name="close" size={24} color={COLORS.textSecondary} />
-              </TouchableOpacity>
-            </View>
-            <View style={{ flex: 1 }}>
-              <ChatEmbed
-                userId={String(userProfile.id)}
-                 userRole={userProfile.role || 'academico'}
-                 userName={userProfile.nombre || 'Académico'}
-              />
-            </View>
-          </View>
-        </View>
-      )}
-      {/* ── MODAL TELEGRAM ── */}
+   {isChatOpen && userProfile.id && (
+  <View style={{
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-start',
+    paddingTop: StatusBar.currentHeight || 0, zIndex: 2000,
+  }}>
+    <View style={{
+      width: '88%', maxWidth: 400, height: '85%',
+      backgroundColor: '#F4F7F9',
+      borderTopRightRadius: 20, borderBottomRightRadius: 20,
+      marginLeft: 'auto', elevation: 10,
+    }}>
+      <View style={{
+        flexDirection: 'row', justifyContent: 'space-between',
+        alignItems: 'center', paddingHorizontal: 16, paddingVertical: 13,
+        backgroundColor: COLORS.surface, borderBottomWidth: 1,
+        borderColor: COLORS.border, borderTopRightRadius: 20,
+      }}>
+        <Text style={{ fontSize: 18, fontWeight: '700', color: COLORS.textPrimary }}>
+          Chat General
+        </Text>
+        <TouchableOpacity onPress={() => setIsChatOpen(false)} style={{ padding: 6 }}>
+          <Ionicons name="close" size={24} color={COLORS.textSecondary} />
+        </TouchableOpacity>
+      </View>
+      <View style={{ flex: 1 }}>
+        <ChatEmbed
+          userId={String(userProfile.id)} // <-- Ahora siempre será un string válido
+          userRole={userProfile.role || 'academico'}
+          userName={userProfile.nombre || 'Académico'}
+        />
+      </View>
+    </View>
+  </View>
+)}
 {showTelegramModal && (
   <Modal
     visible={showTelegramModal}
