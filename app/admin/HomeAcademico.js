@@ -863,6 +863,7 @@ const fetchUserProfile = useCallback(async () => {
     setUserProfile((prev) => ({ ...prev, loading: false }));
   }
 }, []);
+
 useEffect(() => {
   const checkAuthAndLoadData = async () => {
     const token = await getTokenAsync();
@@ -884,9 +885,17 @@ useEffect(() => {
   };
 
   checkAuthAndLoadData();
-   const interval = setInterval(fetchNotifications, 30000);
-  return () => clearInterval(interval);
-}, [fetchDashboardData, fetchUserProfile, fetchHistoricalData,fetchHistoricalData,checkTelegramStatus,fetchEstudiantesInscritosFacultad, router]);
+  
+  // Polling de notificaciones cada 60 segundos
+  const notificationInterval = setInterval(() => {
+    fetchNotifications();
+  }, 60000);
+
+  // ✅ FUNCIÓN DE LIMPIEZA: Destruye el intervalo anterior para evitar duplicados
+  return () => {
+    clearInterval(notificationInterval);
+  };
+}, []); // ✅ CAMBIAR A ARRAY VACÍO: Solo se ejecuta UNA vez al montar la pantalla
   const { columns: dashboardColumns, cardWidth: dashboardCardWidth } = useMemo(() => {
     let numColumns = Math.floor(windowWidth / (MIN_CARD_WIDTH_DASHBOARD + CARD_MARGIN));
     numColumns = Math.min(numColumns, MAX_COLUMNS_DASHBOARD);
