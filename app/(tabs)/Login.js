@@ -270,8 +270,22 @@ const LoginScreen = () => {
     }
   };
 
-  const handleRegisterStudent = () => {
-    router.push('../admin/RegistroEstudianteScreen');
+    const handleRegisterStudent = () => {
+    console.log('🔗 Intentando navegar al registro de estudiante...');
+    try {
+      // OPCIÓN A: Si tu archivo está dentro de la carpeta app/admin/
+      router.push('/admin/RegistroEstudianteScreen');
+      
+      // OPCIÓN B: Si tu archivo está directamente en la carpeta app/ (raíz), usa esta en su lugar:
+      // router.push('/RegistroEstudianteScreen');
+      
+    } catch (error) {
+      console.error('❌ Error de navegación:', error);
+      Alert.alert(
+        'Error de Navegación', 
+        'No se pudo abrir la pantalla de registro. Verifica que el archivo "RegistroEstudianteScreen.js" exista en la carpeta correcta.'
+      );
+    }
   };
 
   return (
