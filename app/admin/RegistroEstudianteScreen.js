@@ -20,32 +20,14 @@ import axios from 'axios';
 import DropDownPicker from 'react-native-dropdown-picker';
 
 const { width } = Dimensions.get('window');
-
-//const API_BASE_URL =  'https://evento.cidtec-uc.com';
-const API_BASE_URL =  'https://unibackend-production.up.railway.app';
-
-//const API_BASE_URL =  'https://unifrontend.onrender.com';
-
+const API_BASE_URL = 'https://unibackend-production.up.railway.app';
 
 const CARRERA_A_FACULTAD = {
-  '2': '3',  
-  '3': '4',  
-  '1': '5',  
-  '4': '2',  
-  '5': '2',  
-  '6': '2',  
-  '7': '2',  
-  '8': '2',  
-  '9': '2',  
-  '10': '4', 
-  '11': '4', 
-  '12': '4', 
-  '13': '3', 
-  '14': '3', 
-  '15': '3', 
-  '16': '3', 
-  '17': '1', 
+  '2': '3', '3': '4', '1': '5', '4': '2', '5': '2', '6': '2', '7': '2', 
+  '8': '2', '9': '2', '10': '4', '11': '4', '12': '4', '13': '3', 
+  '14': '3', '15': '3', '16': '3', '17': '1',
 };
+
 const NOMBRES_FACULTADES = {
   '1': 'Facultad de Ingeniería',
   '2': 'Facultad de Ciencias Económicas',
@@ -53,9 +35,9 @@ const NOMBRES_FACULTADES = {
   '4': 'Facultad de Diseño y Tecnología',
   '5': 'Facultad de Ciencias Jurídicas',
 };
+
 const Toast = ({ visible, message }) => {
   if (!visible) return null;
-  
   return (
     <View style={styles.toastContainer}>
       <View style={styles.toastContent}>
@@ -65,9 +47,9 @@ const Toast = ({ visible, message }) => {
     </View>
   );
 };
+
 const CrearUsuarioEstudiante = () => {
   const router = useRouter();
-
   const role = 'student';
 
   const [facultadSeleccionada, setFacultadSeleccionada] = useState(null); 
@@ -77,31 +59,19 @@ const CrearUsuarioEstudiante = () => {
   const [openCarrera, setOpenCarrera] = useState(false);
   const [carreraSeleccionada, setCarreraSeleccionada] = useState(null);
   const [opcionesCarrera, setOpcionesCarrera] = useState([
-    { label: 'Derecho', value: '1' },
-    { label: 'Psicología', value: '2' },
-    { label: 'Periodismo', value: '3' },
-    { label: 'Administración de Empresas', value: '4' },
-    { label: 'Administración de Hotelería y Turismo', value: '5' },
-    { label: 'Contaduría Pública', value: '6' }, 
-    { label: 'Ingeniería Comercial', value: '7' },
-    { label: 'Ingeniería Económica', value: '8' },
-    { label: 'Ingeniería Económica y Financiera', value: '9' },
-    { label: 'Arquitectura', value: '10' },
-    { label: 'Diseño Gráfico y Producción Cross Media', value: '11' },
-    { label: 'Publicidad y Marketing', value: '12' },
-    { label: 'Bioquímica y Farmacia', value: '13' },
-    { label: 'Enfermería', value: '14' },
-    { label: 'Medicina', value: '15' },
-    { label: 'Odontología', value: '16' },
+    { label: 'Derecho', value: '1' }, { label: 'Psicología', value: '2' },
+    { label: 'Periodismo', value: '3' }, { label: 'Administración de Empresas', value: '4' },
+    { label: 'Administración de Hotelería y Turismo', value: '5' }, { label: 'Contaduría Pública', value: '6' }, 
+    { label: 'Ingeniería Comercial', value: '7' }, { label: 'Ingeniería Económica', value: '8' },
+    { label: 'Ingeniería Económica y Financiera', value: '9' }, { label: 'Arquitectura', value: '10' },
+    { label: 'Diseño Gráfico y Producción Cross Media', value: '11' }, { label: 'Publicidad y Marketing', value: '12' },
+    { label: 'Bioquímica y Farmacia', value: '13' }, { label: 'Enfermería', value: '14' },
+    { label: 'Medicina', value: '15' }, { label: 'Odontología', value: '16' },
     { label: 'Ingeniería de Sistemas', value: '17' },
   ]);
 
   const capitalizeFirstLetter = (text) => {
-    return text
-      .toLowerCase()
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
+    return text.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   };
 
   const validate = (field, value) => {
@@ -133,13 +103,8 @@ const CrearUsuarioEstudiante = () => {
   };
   
   const [formData, setFormData] = useState({
-    username: '',
-    nombre: '',
-    apellidopat: '',
-    apellidomat: '',
-    email: '',
-    contrasenia: '',
-    habilitado: true,
+    username: '', nombre: '', apellidopat: '', apellidomat: '',
+    email: '', contrasenia: '', habilitado: true,
   });
   const [successMessage, setSuccessMessage] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -149,7 +114,7 @@ const CrearUsuarioEstudiante = () => {
   const totalSteps = 3;
   
   const getToken = async () => {
-    const TOKEN_KEY = 'adminAuthToken';
+    const TOKEN_KEY = 'adminAuthToken'; // O 'studentAuthToken' si aplica
     try {
       if (Platform.OS === 'web') {
         return localStorage.getItem(TOKEN_KEY);
@@ -162,40 +127,37 @@ const CrearUsuarioEstudiante = () => {
     }
   };
 
+  // ✅ CORREGIDO: Obtiene facultades CON o SIN token
   useEffect(() => {
     const fetchFacultades = async () => {
       try {
         const token = await getToken();
-        if (!token) throw new Error('Token no encontrado.');
         
-        const response = await axios.get(`${API_BASE_URL}/facultades`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          timeout: 30000
-        });
+        const config = {
+          timeout: 30000,
+          headers: { 'Content-Type': 'application/json' }
+        };
+        
+        // Solo agregamos el token si existe (ej: si un admin está creando al estudiante)
+        if (token) {
+          config.headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const response = await axios.get(`${API_BASE_URL}/facultades`, config);
         
         if (response.data && Array.isArray(response.data)) {
           const facultadesFormateadas = response.data.map(facultad => ({
             label: facultad.nombre_facultad || 'Sin nombre',
-            value: facultad.facultad_id?.toString() || ''
+            value: facultad.facultad_id?.toString() || facultad.id?.toString() || ''
           })).filter(f => f.value && f.label);
+          
           setOpcionesFacultad(facultadesFormateadas);
-          if (facultadesFormateadas.length === 0) {
-            Alert.alert('⚠️ Aviso', 'No hay facultades habilitadas en el sistema.');
-          }
         } else {
-          setOpcionesFacultad([
-            { label: 'Facultad de Ingeniería', value: '1' },
-            { label: 'Facultad de Ciencias Económicas', value: '2' },
-            { label: 'Facultad de Ciencias de la Salud', value: '3' },
-            { label: 'Facultad de Diseño y Tecnología', value: '4' },
-            { label: 'Facultad de Ciencias Jurídicas', value: '5' },
-          ]);
+          throw new Error('Formato de respuesta inválido');
         }
       } catch (error) {
-        console.error('Error al obtener las Facultades', error);
+        console.error('❌ Error al obtener las Facultades:', error.message);
+        // Fallback seguro para que la pantalla nunca se quede vacía
         setOpcionesFacultad([
           { label: 'Facultad de Ingeniería', value: '1' },
           { label: 'Facultad de Ciencias Económicas', value: '2' },
@@ -208,37 +170,17 @@ const CrearUsuarioEstudiante = () => {
     fetchFacultades();
   }, []);
 
-  useEffect(() => {
-  if (carreraSeleccionada) {
-    const facultadId = CARRERA_A_FACULTAD[carreraSeleccionada];
-    if (facultadId) {
-      setFacultadSeleccionada(facultadId);
-      setOpenFacultad(false);
-    }
-  }
-  }, [carreraSeleccionada]);
+  // ✅ ELIMINADO: El useEffect de checkAuth que expulsaba al usuario no logueado.
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const TOKEN_KEY = 'adminAuthToken';
-      let token;
-      try {
-        if (Platform.OS === 'web') {
-          token = localStorage.getItem(TOKEN_KEY);
-        } else {
-          token = await SecureStore.getItemAsync(TOKEN_KEY);
-        }
-        if (!token) {
-          Alert.alert("Acceso Denegado", "No estás autenticado. Por favor, inicia sesión.");
-          router.replace('/Login');
-        }
-      } catch (error) {
-        console.error('Error verificando autenticación:', error);
-        Alert.alert("Error", "Error verificando la autenticación.");
+    if (carreraSeleccionada) {
+      const facultadId = CARRERA_A_FACULTAD[carreraSeleccionada];
+      if (facultadId) {
+        setFacultadSeleccionada(facultadId);
+        setOpenFacultad(false);
       }
-    };
-    checkAuth();
-  }, []);
+    }
+  }, [carreraSeleccionada]);
 
   const updateFormData = (field, value) => {
     let formattedValue = value;
@@ -293,10 +235,8 @@ const CrearUsuarioEstudiante = () => {
     if (!validateStep(3)) return;
     
     setIsLoading(true);
-    
     try {
       const token = await getToken();
-      if (!token) throw new Error('Token no encontrado. Por favor, inicia sesión nuevamente.');
       
       const newUserPayload = {
         username: formData.username.trim(),
@@ -311,104 +251,43 @@ const CrearUsuarioEstudiante = () => {
         idfacultad: parseInt(facultadSeleccionada),
       };
      
-      console.log("FRONTEND - Payload enviado:", JSON.stringify(newUserPayload, null, 2));
-      console.log("📤 URL completa:", `${API_BASE_URL}/auth/registerStudent`);
-      const response = await axios.post(`${API_BASE_URL}/auth/registerStudent`, newUserPayload, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        timeout: 30000  // ✅ aumentado a 30s para Render
-      });
+      const config = {
+        timeout: 30000,
+        headers: { 'Content-Type': 'application/json' }
+      };
+      if (token) config.headers['Authorization'] = `Bearer ${token}`;
+
+      const response = await axios.post(`${API_BASE_URL}/auth/registerStudent`, newUserPayload, config);
 
       if (response.status === 201 || response.status === 200) {
         setSuccessMessage('¡Estudiante creado correctamente!');
         setTimeout(() => {
-          setFormData({
-            username: '',
-            nombre: '',
-            apellidopat: '',
-            apellidomat: '',
-            email: '',
-            contrasenia: '',
-            habilitado: true,
-          });
+          setFormData({ username: '', nombre: '', apellidopat: '', apellidomat: '', email: '', contrasenia: '', habilitado: true });
           setCarreraSeleccionada(null);
           setFacultadSeleccionada(null);
           setCurrentStep(1);
           setSuccessMessage(null);
-          router.replace('Login');
+          router.replace('/'); // Redirige al login o home
         }, 2000);
         return;
       }
-      
     } catch (error) {
       console.error("Error al crear estudiante:", error);
+      let errorMessage = 'Error desconocido al crear estudiante.';
       
-      if (error.response) {
-      console.error("📋 Status:", error.response.status);
-      console.error("📋 Headers:", error.response.headers);
-      console.error("📋 Data:", error.response.data);
-      console.error("📋 URL solicitada:", error.config?.url);
-    }
-    
-    let errorMessage = 'Error desconocido al crear estudiante.';
-    const newErrors = {};
-    let stepToRevert = 1;
-
-    if (error.response) {
-      // ✅ Leer el mensaje completo del backend
-      if (typeof error.response.data === 'string') {
-        errorMessage = error.response.data;
-      } else if (error.response.data?.message) {
-        errorMessage = error.response.data.message;
+      if (error.response?.data) {
+        errorMessage = typeof error.response.data === 'string' 
+          ? error.response.data 
+          : (error.response.data.message || error.response.data.error || 'Error en el servidor');
+      } else if (error.request) {
+        errorMessage = 'No se pudo conectar con el servidor. Verifica tu internet.';
       }
 
-      if (error.response.data?.errors && Array.isArray(error.response.data.errors)) {
-        const backendErrors = error.response.data.errors;
-        const errorMessages = [];
-
-        backendErrors.forEach(err => {
-          const fieldPath = err.path || err.param;
-          const message = err.message || err.msg;
-          if (fieldPath) {
-            newErrors[fieldPath] = message;
-            if (['username', 'nombre', 'apellidopat', 'apellidomat'].includes(fieldPath)) {
-              stepToRevert = 1;
-            } else if (['email', 'contrasenia'].includes(fieldPath)) {
-              stepToRevert = Math.max(stepToRevert, 2);
-            } else if (['idcarrera', 'idfacultad'].includes(fieldPath)) {
-              stepToRevert = 3;
-            }
-          }
-          errorMessages.push(message);
-        });
-        errorMessage = errorMessages.join('\n');
-      } else if (error.response.status === 409) {
-        errorMessage = 'El estudiante ya existe. Intenta con otro nombre de usuario o email.';
-        stepToRevert = 1;
-      } else if (error.response.status === 400) {
-        errorMessage = error.response.data?.message || 'Datos inválidos. Verifica la información.';
-      } else if (error.response.status >= 500) {
-        errorMessage = 'Error del servidor. Intenta nuevamente más tarde.';
-      }
-    } else if (error.request) {
-      console.error("📋 Request sin respuesta:", error.request);
-      errorMessage = 'No se pudo conectar con el servidor. Verifica tu conexión a internet.';
-    } else {
-      errorMessage = error.message || 'Error al configurar la petición.';
+      Alert.alert('Error', errorMessage, [{ text: 'OK' }]);
+    } finally {
+      setIsLoading(false);
     }
-
-    setErrors(prev => ({ ...prev, ...newErrors }));
-    
-    Alert.alert('Error', errorMessage, [
-      { text: 'OK', onPress: () => setCurrentStep(stepToRevert) }
-    ]);
-
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
   const closeAllDropdowns = () => {
     setOpenCarrera(false);
@@ -419,27 +298,14 @@ const CrearUsuarioEstudiante = () => {
     <View style={styles.progressContainer}>
       {[1, 2, 3].map((step) => (
         <View key={step} style={styles.progressStep}>
-          <View style={[
-            styles.progressCircle,
-            currentStep >= step && styles.progressCircleActive
-          ]}>
+          <View style={[styles.progressCircle, currentStep >= step && styles.progressCircleActive]}>
             {currentStep > step ? (
               <Ionicons name="checkmark" size={16} color="#fff" />
             ) : (
-              <Text style={[
-                styles.progressNumber,
-                currentStep >= step && styles.progressNumberActive
-              ]}>
-                {step}
-              </Text>
+              <Text style={[styles.progressNumber, currentStep >= step && styles.progressNumberActive]}>{step}</Text>
             )}
           </View>
-          {step < 3 && (
-            <View style={[
-              styles.progressLine,
-              currentStep > step && styles.progressLineActive
-            ]} />
-          )}
+          {step < 3 && <View style={[styles.progressLine, currentStep > step && styles.progressLineActive]} />}
         </View>
       ))}
     </View>
@@ -452,20 +318,11 @@ const CrearUsuarioEstudiante = () => {
 
   const renderInputField = (label, field, placeholder, options = {}) => (
     <View style={styles.inputContainer}>
-      <Text style={styles.label}>
-        {label}
-        {options.required && <Text style={styles.required}> *</Text>}
-      </Text>
+      <Text style={styles.label}>{label}{options.required && <Text style={styles.required}> *</Text>}</Text>
       <View style={styles.inputWrapper}>
-        {options.icon && (
-          <Ionicons name={options.icon} size={20} color="#666" style={styles.inputIcon} />
-        )}
+        {options.icon && <Ionicons name={options.icon} size={20} color="#666" style={styles.inputIcon} />}
         <TextInput
-          style={[
-            styles.input,
-            options.icon && styles.inputWithIcon,
-            errors[field] && styles.inputError
-          ]}
+          style={[styles.input, options.icon && styles.inputWithIcon, errors[field] && styles.inputError]}
           placeholder={placeholder}
           value={formData[field]}
           onChangeText={(value) => updateFormData(field, value)}
@@ -477,15 +334,8 @@ const CrearUsuarioEstudiante = () => {
           onFocus={closeAllDropdowns}
         />
         {field === 'contrasenia' && (
-          <TouchableOpacity
-            style={styles.passwordToggle}
-            onPress={() => setShowPassword(!showPassword)}
-          >
-            <Ionicons
-              name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-              size={20}
-              color="#666"
-            />
+          <TouchableOpacity style={styles.passwordToggle} onPress={() => setShowPassword(!showPassword)}>
+            <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#666" />
           </TouchableOpacity>
         )}
       </View>
@@ -495,38 +345,24 @@ const CrearUsuarioEstudiante = () => {
 
   const renderStep1 = () => (
     <View style={styles.stepContainer}>
-      {renderInputField('Nombre de Usuario', 'username', 'Ej: jperez', {
-        required: true, icon: 'person-outline', autoCapitalize: 'none'
-      })}
-      {renderInputField('Nombre(s)', 'nombre', 'Ej: Juan Carlos', {
-        required: true, icon: 'card-outline', autoCapitalize: 'words'
-      })}
-      {renderInputField('Apellido Paterno', 'apellidopat', 'Ej: Pérez', {
-        required: true, icon: 'card-outline', autoCapitalize: 'words'
-      })}
-      {renderInputField('Apellido Materno', 'apellidomat', 'Ej: López (Opcional)', {
-        icon: 'card-outline', autoCapitalize: 'words'
-      })}
+      {renderInputField('Nombre de Usuario', 'username', 'Ej: jperez', { required: true, icon: 'person-outline', autoCapitalize: 'none' })}
+      {renderInputField('Nombre(s)', 'nombre', 'Ej: Juan Carlos', { required: true, icon: 'card-outline', autoCapitalize: 'words' })}
+      {renderInputField('Apellido Paterno', 'apellidopat', 'Ej: Pérez', { required: true, icon: 'card-outline', autoCapitalize: 'words' })}
+      {renderInputField('Apellido Materno', 'apellidomat', 'Ej: López (Opcional)', { icon: 'card-outline', autoCapitalize: 'words' })}
     </View>
   );
 
   const renderStep2 = () => (
     <View style={styles.stepContainer}>
-      {renderInputField('Correo Electrónico', 'email', 'ejemplo@correo.com', {
-        required: true, icon: 'mail-outline', keyboardType: 'email-address', autoCapitalize: 'none'
-      })}
-      {renderInputField('Contraseña', 'contrasenia', 'Mínimo 6 caracteres', {
-        required: true, icon: 'lock-closed-outline'
-      })}
+      {renderInputField('Correo Electrónico', 'email', 'ejemplo@correo.com', { required: true, icon: 'mail-outline', keyboardType: 'email-address', autoCapitalize: 'none' })}
+      {renderInputField('Contraseña', 'contrasenia', 'Mínimo 6 caracteres', { required: true, icon: 'lock-closed-outline' })}
       <View style={styles.passwordStrengthContainer}>
         <View style={styles.passwordStrength}>
           <View style={[styles.strengthBar, formData.contrasenia.length >= 6 && styles.strengthBarWeak]} />
           <View style={[styles.strengthBar, formData.contrasenia.length >= 8 && /[A-Z]/.test(formData.contrasenia) && styles.strengthBarMedium]} />
           <View style={[styles.strengthBar, formData.contrasenia.length >= 8 && /[A-Z]/.test(formData.contrasenia) && /[0-9]/.test(formData.contrasenia) && styles.strengthBarStrong]} />
         </View>
-        <Text style={styles.passwordHint}>
-          Usa al menos 6 caracteres con mayúsculas y números para mayor seguridad
-        </Text>
+        <Text style={styles.passwordHint}>Usa al menos 6 caracteres con mayúsculas y números</Text>
       </View>
     </View>
   );
@@ -538,70 +374,42 @@ const CrearUsuarioEstudiante = () => {
           <Ionicons name="person" size={20} color="#2ecc71" />
           <Text style={styles.roleBadgeText}>Rol: Estudiante</Text>
         </View>
-        <Text style={styles.roleInfoText}>
-          Esta pantalla está diseñada exclusivamente para crear cuentas de estudiantes
-        </Text>
+        <Text style={styles.roleInfoText}>Esta pantalla está diseñada exclusivamente para crear cuentas de estudiantes</Text>
       </View>
 
       <View style={[styles.conditionalContainer, { zIndex: 2000 }]}>
-        <Text style={styles.label}>
-          Carrera del Estudiante <Text style={styles.required}>*</Text>
-        </Text>
+        <Text style={styles.label}>Carrera del Estudiante <Text style={styles.required}>*</Text></Text>
         <View style={[styles.dropdownContainer, { marginBottom: openCarrera ? 280 : 20 }]}>
           <DropDownPicker
-            open={openCarrera}
-            value={carreraSeleccionada}
-            items={opcionesCarrera}
-            setOpen={setOpenCarrera}
-            setValue={setCarreraSeleccionada}
-            setItems={setOpcionesCarrera}
+            open={openCarrera} value={carreraSeleccionada} items={opcionesCarrera}
+            setOpen={setOpenCarrera} setValue={setCarreraSeleccionada} setItems={setOpcionesCarrera}
             placeholder="Selecciona la carrera del estudiante"
             style={[styles.dropdown, styles.carreraDropdown, errors.carrera && styles.inputError]}
             dropDownContainerStyle={[styles.dropdownList, { zIndex: 2000, elevation: 2000, maxHeight: 250 }]}
-            listMode="SCROLLVIEW"
-            textStyle={styles.dropdownText}
-            placeholderStyle={styles.dropdownPlaceholder}
-            onOpen={() => setOpenFacultad(false)}
-            searchable={true}
-            searchPlaceholder="Buscar carrera..."
-            showArrowIcon={true}
-            showTickIcon={true}
-            itemSeparator={true}
-            itemSeparatorStyle={{ backgroundColor: "#f0f0f0" }}
+            listMode="SCROLLVIEW" textStyle={styles.dropdownText} placeholderStyle={styles.dropdownPlaceholder}
+            onOpen={() => setOpenFacultad(false)} searchable={true} searchPlaceholder="Buscar carrera..."
+            showArrowIcon={true} showTickIcon={true} itemSeparator={true} itemSeparatorStyle={{ backgroundColor: "#f0f0f0" }}
           />
         </View>
         {errors.carrera && <Text style={styles.errorText}>{errors.carrera}</Text>}
         <View style={styles.roleInfoContainer}>
-          <Text style={styles.roleInfoText}>
-            💡 Selecciona la carrera y la facultad se asignará automáticamente
-          </Text>
+          <Text style={styles.roleInfoText}>💡 Selecciona la carrera y la facultad se asignará automáticamente</Text>
         </View>
       </View>
 
       <View style={[styles.conditionalContainer, { zIndex: 1000 }]}>
-        <Text style={styles.label}>
-          Facultad del Estudiante <Text style={styles.required}>*</Text>
-        </Text>
+        <Text style={styles.label}>Facultad del Estudiante <Text style={styles.required}>*</Text></Text>
         <View style={[styles.dropdownContainer, { marginTop: 5 }]}>
           <DropDownPicker
-            open={openFacultad}
-            value={facultadSeleccionada}
-            items={opcionesFacultad}
-            setOpen={setOpenFacultad}
-            setValue={setFacultadSeleccionada}
-            setItems={setOpcionesFacultad}
+            open={openFacultad} value={facultadSeleccionada} items={opcionesFacultad}
+            setOpen={setOpenFacultad} setValue={setFacultadSeleccionada} setItems={setOpcionesFacultad}
             placeholder="La facultad se asignará automáticamente"
             style={[styles.dropdown, errors.facultad && styles.inputError]}
-            dropDownContainerStyle={styles.dropdownList}
-            listMode="SCROLLVIEW"
-            textStyle={styles.dropdownText}
-            placeholderStyle={styles.dropdownPlaceholder}
-            onOpen={() => setOpenCarrera(false)}
-            disabled={!!carreraSeleccionada}
-            disabledStyle={{ backgroundColor: '#f0f0f0' }}
-            disabledTextStyle={{ color: '#666', fontWeight: '600' }}
-            zIndex={1000}
-            zIndexInverse={1000}
+            dropDownContainerStyle={styles.dropdownList} listMode="SCROLLVIEW"
+            textStyle={styles.dropdownText} placeholderStyle={styles.dropdownPlaceholder}
+            onOpen={() => setOpenCarrera(false)} disabled={!!carreraSeleccionada}
+            disabledStyle={{ backgroundColor: '#f0f0f0' }} disabledTextStyle={{ color: '#666', fontWeight: '600' }}
+            zIndex={1000} zIndexInverse={1000}
           />
         </View>
         {errors.facultad && <Text style={styles.errorText}>{errors.facultad}</Text>}
@@ -619,24 +427,10 @@ const CrearUsuarioEstudiante = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.container}
-      >
-        <Stack.Screen 
-          options={{ 
-            title: 'Nuevo Estudiante',
-            headerStyle: { backgroundColor: '#e95a0c' },
-            headerTintColor: '#fff',
-            headerTitleStyle: { fontWeight: 'bold' },
-          }} 
-        />
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.container}>
+        <Stack.Screen options={{ title: 'Nuevo Estudiante', headerStyle: { backgroundColor: '#e95a0c' }, headerTintColor: '#fff', headerTitleStyle: { fontWeight: 'bold' } }} />
         
-        <ScrollView 
-          contentContainerStyle={styles.scrollContainer} 
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
+        <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
             {renderProgressBar()}
             {renderStepTitle()}
@@ -648,22 +442,14 @@ const CrearUsuarioEstudiante = () => {
 
           <View style={styles.buttonContainer}>
             {currentStep > 1 && (
-              <TouchableOpacity
-                style={styles.secondaryButton}
-                onPress={prevStep}
-                disabled={isLoading}
-              >
+              <TouchableOpacity style={styles.secondaryButton} onPress={prevStep} disabled={isLoading}>
                 <Ionicons name="arrow-back" size={20} color="#e95a0c" />
                 <Text style={styles.secondaryButtonText}>Anterior</Text>
               </TouchableOpacity>
             )}
 
             <TouchableOpacity
-              style={[
-                styles.primaryButton,
-                isLoading && styles.buttonDisabled,
-                currentStep === 1 && styles.fullWidthButton
-              ]}
+              style={[styles.primaryButton, isLoading && styles.buttonDisabled, currentStep === 1 && styles.fullWidthButton]}
               onPress={currentStep === totalSteps ? handleAddUser : nextStep}
               disabled={isLoading}
             >
@@ -671,18 +457,13 @@ const CrearUsuarioEstudiante = () => {
                 <ActivityIndicator color="#fff" size="small" />
               ) : (
                 <>
-                  <Text style={styles.primaryButtonText}>
-                    {currentStep === totalSteps ? 'Crear Estudiante' : 'Siguiente'}
-                  </Text>
-                  {currentStep < totalSteps && (
-                    <Ionicons name="arrow-forward" size={20} color="#fff" />
-                  )}
+                  <Text style={styles.primaryButtonText}>{currentStep === totalSteps ? 'Crear Estudiante' : 'Siguiente'}</Text>
+                  {currentStep < totalSteps && <Ionicons name="arrow-forward" size={20} color="#fff" />}
                 </>
               )}
             </TouchableOpacity>
           </View>
         </ScrollView>
-        
         <Toast visible={!!successMessage} message={successMessage} />
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -694,16 +475,10 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f8f9fa' },
   scrollContainer: { paddingHorizontal: 20, paddingBottom: 40 },
   header: { paddingVertical: 20, alignItems: 'center' },
-  carreraDropdown: {
-    paddingVertical: 15, paddingHorizontal: 15,
-    minHeight: 50, borderRadius: 12, borderWidth: 1, borderColor: '#ddd',
-  },
+  carreraDropdown: { paddingVertical: 15, paddingHorizontal: 15, minHeight: 50, borderRadius: 12, borderWidth: 1, borderColor: '#ddd' },
   progressContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
   progressStep: { flexDirection: 'row', alignItems: 'center' },
-  progressCircle: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: '#e0e0e0', justifyContent: 'center', alignItems: 'center',
-  },
+  progressCircle: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#e0e0e0', justifyContent: 'center', alignItems: 'center' },
   progressCircleActive: { backgroundColor: '#e95a0c' },
   progressNumber: { fontSize: 16, fontWeight: 'bold', color: '#999' },
   progressNumberActive: { color: '#fff' },
@@ -716,12 +491,7 @@ const styles = StyleSheet.create({
   label: { fontSize: 16, color: '#333', marginBottom: 8, fontWeight: '600' },
   required: { color: '#e74c3c' },
   inputWrapper: { position: 'relative' },
-  input: {
-    backgroundColor: '#fff', borderWidth: 1, borderColor: '#ddd',
-    borderRadius: 12, paddingHorizontal: 15, paddingVertical: 15, fontSize: 16,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05, shadowRadius: 3.84, elevation: 2,
-  },
+  input: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#ddd', borderRadius: 12, paddingHorizontal: 15, paddingVertical: 15, fontSize: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 3.84, elevation: 2 },
   inputWithIcon: { paddingLeft: 50 },
   inputIcon: { position: 'absolute', left: 15, top: 17, zIndex: 1 },
   passwordToggle: { position: 'absolute', right: 15, top: 17 },
@@ -739,51 +509,22 @@ const styles = StyleSheet.create({
   dropdownList: { backgroundColor: '#fff', borderColor: '#ddd', borderWidth: 1, borderRadius: 12 },
   dropdownText: { fontSize: 16, color: '#333' },
   dropdownPlaceholder: { fontSize: 16, color: '#999' },
-  roleBadgeContainer: {
-    backgroundColor: '#e8f5e9', borderRadius: 12, padding: 15,
-    marginBottom: 25, alignItems: 'center', borderLeftWidth: 4, borderLeftColor: '#2ecc71',
-  },
-  roleBadge: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#2ecc71',
-    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, marginBottom: 8,
-  },
+  roleBadgeContainer: { backgroundColor: '#e8f5e9', borderRadius: 12, padding: 15, marginBottom: 25, alignItems: 'center', borderLeftWidth: 4, borderLeftColor: '#2ecc71' },
+  roleBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#2ecc71', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, marginBottom: 8 },
   roleBadgeText: { color: '#fff', fontSize: 16, fontWeight: '600', marginLeft: 8 },
   roleInfoText: { fontSize: 14, color: '#27ae60', textAlign: 'center', marginTop: 5 },
-  roleInfoContainer: {
-    backgroundColor: '#f8f9fa', borderRadius: 8, padding: 12,
-    marginTop: 10, borderLeftWidth: 3, borderLeftColor: '#e95a0c',
-  },
-  autoSelectionBadge: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#e8f8f5',
-    padding: 10, borderRadius: 8, marginTop: 10, borderLeftWidth: 3, borderLeftColor: '#27ae60',
-  },
+  roleInfoContainer: { backgroundColor: '#f8f9fa', borderRadius: 8, padding: 12, marginTop: 10, borderLeftWidth: 3, borderLeftColor: '#e95a0c' },
+  autoSelectionBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#e8f8f5', padding: 10, borderRadius: 8, marginTop: 10, borderLeftWidth: 3, borderLeftColor: '#27ae60' },
   autoSelectionText: { fontSize: 14, color: '#27ae60', marginLeft: 8, fontWeight: '500' },
   buttonContainer: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: 30, gap: 15 },
-  primaryButton: {
-    backgroundColor: '#e95a0c', paddingVertical: 15, paddingHorizontal: 30,
-    borderRadius: 12, alignItems: 'center', justifyContent: 'center',
-    flexDirection: 'row', flex: 1, shadowColor: '#e95a0c',
-    shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 5, elevation: 8,
-  },
-  secondaryButton: {
-    backgroundColor: '#fff', paddingVertical: 15, paddingHorizontal: 30,
-    borderRadius: 12, alignItems: 'center', justifyContent: 'center',
-    flexDirection: 'row', flex: 1, borderWidth: 2, borderColor: '#e95a0c',
-  },
+  primaryButton: { backgroundColor: '#e95a0c', paddingVertical: 15, paddingHorizontal: 30, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', flex: 1, shadowColor: '#e95a0c', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 5, elevation: 8 },
+  secondaryButton: { backgroundColor: '#fff', paddingVertical: 15, paddingHorizontal: 30, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', flex: 1, borderWidth: 2, borderColor: '#e95a0c' },
   fullWidthButton: { flex: 1 },
   buttonDisabled: { backgroundColor: '#f9bda3', shadowOpacity: 0.1 },
   primaryButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold', marginRight: 8 },
   secondaryButtonText: { color: '#e95a0c', fontSize: 16, fontWeight: 'bold', marginLeft: 8 },
-  toastContainer: {
-    position: 'absolute', bottom: 60, left: 0, right: 0,
-    alignItems: 'center', zIndex: 9999, paddingHorizontal: 20,
-  },
-  toastContent: {
-    backgroundColor: '#27ae60', flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 24, paddingVertical: 16, borderRadius: 12,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3, shadowRadius: 6, elevation: 8, minWidth: 280,
-  },
+  toastContainer: { position: 'absolute', bottom: 60, left: 0, right: 0, alignItems: 'center', zIndex: 9999, paddingHorizontal: 20 },
+  toastContent: { backgroundColor: '#27ae60', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 16, borderRadius: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 8, minWidth: 280 },
   toastText: { color: '#fff', fontSize: 16, fontWeight: '600', marginLeft: 12, textAlign: 'center' },
 });
 
