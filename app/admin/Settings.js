@@ -59,7 +59,8 @@ const SettingsScreen = () => {
     try {
       const token = await getTokenAsync();
       if (!token) {
-        Alert.alert('Autenticación Requerida', 'No se encontró el token.', [{ text: 'OK', onPress: () => router.replace('/LoginAdmin') }]);
+        Alert.alert('Autenticación Requerida', 
+          'No se encontró el token.', [{ text: 'OK', onPress: () => router.replace('/LoginAdmin') }]);
         return;
       }
 
@@ -68,24 +69,25 @@ const SettingsScreen = () => {
       });
 
       const userData = response.data.user || response.data; 
+      console.log('👤 Perfil recibido del backend:', userData);
 
-      // ✅ Aplicar el tema y el color de acento guardados en el backend al cargar la pantalla
       const savedTheme = userData.theme || 'light';
       const savedAccent = userData.color_acento || '#E95A0C';
-      setGlobalTheme(savedTheme);
-      setGlobalAccentColor(savedAccent);
+      if (savedTheme)  setGlobalTheme(savedTheme);
+      if (savedAccent) setGlobalAccentColor(savedAccent);
 
-      setUser({
-        id: userData.id || null,
-        nombre: userData.nombre || '',
-        apellidopat: userData.apellidopat || '',
-        apellidomat: userData.apellidomat || '',
-        email: userData.email || 'sin-email@ejemplo.com',
-        role: userData.role || 'admin',
-        facultad: userData.facultad || 'Sin facultad asignada',
-        theme: savedTheme,
-        color_acento: savedAccent
-      });
+      setUser(prev => ({
+      ...prev,
+      id: userData.id ?? prev.id,
+      nombre: userData.nombre ?? prev.nombre,
+      apellidopat: userData.apellidopat ?? prev.apellidopat,
+      apellidomat: userData.apellidomat ?? prev.apellidomat,
+      email: userData.email || prev.email,
+      role: userData.role || prev.role,
+      facultad: userData.facultad || prev.facultad,
+      theme: savedTheme || globalTheme,          
+      color_acento: savedAccent || accentColor,  
+    }));
       
     } catch (error) {
       console.error("❌ Settings: Error al cargar perfil:", error);
@@ -124,7 +126,6 @@ const SettingsScreen = () => {
     }
   };
 
-  // ✅ Guarda el color de acento elegido por el usuario en el backend
   const handleAccentColorChange = async (newColor) => {
     const previousColor = user.color_acento;
 
