@@ -18,30 +18,10 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../context/ThemeContext'; // Asegúrate que la ruta sea correcta
+import { ACCENT_PRESETS } from '../../utils/colorUtils'; // Asegúrate que la ruta sea correcta
 
 const API_BASE_URL = 'https://unibackend-production.up.railway.app';
 const TOKEN_KEY = 'adminAuthToken'; 
-
-const COLORS = {
-  primary: '#E95A0C',
-  primaryLight: '#FFEDD5',
-  secondary: '#4B5563',
-  accent: '#EF4444',
-  success: '#10B981',
-  warning: '#F59E0B',
-  info: '#3B82F6',
-  background: '#F9FAFB',
-  surface: '#FFFFFF',
-  textPrimary: '#1F2937',
-  textSecondary: '#6B7280',
-  textTertiary: '#9CA3AF',
-  border: '#E5E7EB',
-  divider: '#D1D5DB',
-  shadow: 'rgba(0, 0, 0, 0.05)',
-  white: '#FFFFFF',
-  black: '#000000',
-  error: '#DC2626',
-};
 
 const getTokenAsync = async () => {
   if (Platform.OS === 'web') {
@@ -61,12 +41,14 @@ const deleteTokenAsync = async () => {
 
 const SettingsScreen = () => {
   const router = useRouter();
-  const { colorScheme, setTheme: setGlobalTheme } = useTheme(); // ✅ Hook del tema
-  
+  // ✅ Ahora también obtenemos "colors" (paleta completa) y el accentColor/setAccentColor
+  const { colorScheme, setTheme: setGlobalTheme, colors, accentColor, setAccentColor: setGlobalAccentColor } = useTheme();
+
   const [loading, setLoading] = useState(true);
   const [savingTheme, setSavingTheme] = useState(false);
+  const [savingColor, setSavingColor] = useState(false);
   const [user, setUser] = useState({ 
-    id: null, nombre: '', apellidopat: '', apellidomat: '', email: '', role: '', facultad: '', theme: 'light'
+    id: null, nombre: '', apellidopat: '', apellidomat: '', email: '', role: '', facultad: '', theme: 'light', color_acento: '#E95A0C'
   });
 
   useEffect(() => {
@@ -87,9 +69,11 @@ const SettingsScreen = () => {
 
       const userData = response.data.user || response.data; 
 
-      // ✅ 1. Aplicar el tema guardado en el backend al cargar la pantalla
+      // ✅ Aplicar el tema y el color de acento guardados en el backend al cargar la pantalla
       const savedTheme = userData.theme || 'light';
+      const savedAccent = userData.color_acento || '#E95A0C';
       setGlobalTheme(savedTheme);
+      setGlobalAccentColor(savedAccent);
 
       setUser({
         id: userData.id || null,
@@ -99,7 +83,8 @@ const SettingsScreen = () => {
         email: userData.email || 'sin-email@ejemplo.com',
         role: userData.role || 'admin',
         facultad: userData.facultad || 'Sin facultad asignada',
-        theme: savedTheme
+        theme: savedTheme,
+        color_acento: savedAccent
       });
       
     } catch (error) {
@@ -114,15 +99,13 @@ const SettingsScreen = () => {
     }
   };
 
-  // ✅ 2. Función para guardar el tema en el backend cuando el usuario cambia el switch
+  // Guarda el modo claro/oscuro en el backend
   const handleThemeChange = async (newValue) => {
     const newTheme = newValue ? 'dark' : 'light';
     
-    // Cambiar visualmente de inmediato
     setGlobalTheme(newTheme);
     setUser(prev => ({ ...prev, theme: newTheme }));
     
-    // Guardar en el backend
     try {
       setSavingTheme(true);
       const token = await getTokenAsync();
@@ -135,10 +118,37 @@ const SettingsScreen = () => {
     } catch (error) {
       console.error("❌ Error al guardar el tema:", error);
       Alert.alert('Error', 'No se pudo guardar tu preferencia de tema');
-      // Revertir visualmente si falló
       setGlobalTheme(user.theme);
     } finally {
       setSavingTheme(false);
+    }
+  };
+
+  // ✅ Guarda el color de acento elegido por el usuario en el backend
+  const handleAccentColorChange = async (newColor) => {
+    const previousColor = user.color_acento;
+
+    // Cambiar visualmente de inmediato (optimista)
+    setGlobalAccentColor(newColor);
+    setUser(prev => ({ ...prev, color_acento: newColor }));
+
+    try {
+      setSavingColor(true);
+      const token = await getTokenAsync();
+      await axios.put(
+        `${API_BASE_URL}/users/${user.id}`,
+        { color_acento: newColor },
+        { headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } }
+      );
+      console.log(`✅ Color de acento '${newColor}' guardado en el backend`);
+    } catch (error) {
+      console.error("❌ Error al guardar el color:", error);
+      Alert.alert('Error', 'No se pudo guardar tu color preferido');
+      // Revertir si falló
+      setGlobalAccentColor(previousColor);
+      setUser(prev => ({ ...prev, color_acento: previousColor }));
+    } finally {
+      setSavingColor(false);
     }
   };
 
@@ -166,12 +176,14 @@ const SettingsScreen = () => {
     Alert.alert('Integración con Telegram', 'Ve al Panel Principal y toca el icono de avión de papel en la cabecera.', [{ text: 'Entendido' }]);
   };
 
+  const styles = createStyles(colors);
+
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: COLORS.background }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={[styles.loadingText, { color: COLORS.textSecondary }]}>Cargando configuración...</Text>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Cargando configuración...</Text>
         </View>
       </SafeAreaView>
     );
@@ -180,18 +192,18 @@ const SettingsScreen = () => {
   const nombreCompleto = `${user.nombre} ${user.apellidopat} ${user.apellidomat}`.trim();
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: COLORS.background }]}>
-      <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={COLORS.primary} />
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.primary} />
       
       <Stack.Screen
         options={{
           title: 'Ajustes',
-          headerStyle: { backgroundColor: COLORS.primary },
-          headerTintColor: '#fff',
+          headerStyle: { backgroundColor: colors.primary },
+          headerTintColor: colors.onPrimary,
           headerTitleStyle: { fontWeight: 'bold' },
           headerLeft: () => (
             <TouchableOpacity onPress={() => router.back()} style={{ marginLeft: 15, padding: 5 }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <Ionicons name="arrow-back" size={24} color="#fff" />
+              <Ionicons name="arrow-back" size={24} color={colors.onPrimary} />
             </TouchableOpacity>
           ),
         }}
@@ -206,7 +218,7 @@ const SettingsScreen = () => {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Nombre Completo</Text>
               <View style={styles.inputContainer}>
-                <Ionicons name="person-outline" size={20} color={COLORS.textSecondary} />
+                <Ionicons name="person-outline" size={20} color={colors.textSecondary} />
                 <Text style={styles.inputText}>{nombreCompleto || 'No especificado'}</Text>
               </View>
             </View>
@@ -214,7 +226,7 @@ const SettingsScreen = () => {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Correo Electrónico</Text>
               <View style={styles.inputContainer}>
-                <Ionicons name="mail-outline" size={20} color={COLORS.textSecondary} />
+                <Ionicons name="mail-outline" size={20} color={colors.textSecondary} />
                 <Text style={styles.inputText}>{user.email}</Text>
               </View>
             </View>
@@ -222,7 +234,7 @@ const SettingsScreen = () => {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Facultad</Text>
               <View style={styles.inputContainer}>
-                <Ionicons name="business-outline" size={20} color={COLORS.textSecondary} />
+                <Ionicons name="business-outline" size={20} color={colors.textSecondary} />
                 <Text style={styles.inputText}>{user.facultad}</Text>
               </View>
             </View>
@@ -230,8 +242,8 @@ const SettingsScreen = () => {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Rol Actual</Text>
               <View style={styles.inputContainer}>
-                <Ionicons name="shield-checkmark-outline" size={20} color={COLORS.success} />
-                <Text style={[styles.inputText, { color: COLORS.success, fontWeight: '600' }]}>
+                <Ionicons name="shield-checkmark-outline" size={20} color={colors.success} />
+                <Text style={[styles.inputText, { color: colors.success, fontWeight: '600' }]}>
                   {user.role.toUpperCase()}
                 </Text>
               </View>
@@ -248,8 +260,8 @@ const SettingsScreen = () => {
               style={styles.editProfileButton}
               activeOpacity={0.7}
             >
-              <Ionicons name="pencil-outline" size={20} color={COLORS.white} />
-              <Text style={styles.editProfileButtonText}>Editar mi Perfil</Text>
+              <Ionicons name="pencil-outline" size={20} color={colors.onPrimary} />
+              <Text style={[styles.editProfileButtonText, { color: colors.onPrimary }]}>Editar mi Perfil</Text>
             </TouchableOpacity>
           </View>
 
@@ -261,10 +273,10 @@ const SettingsScreen = () => {
                 <Text style={styles.hintText}>Recibir alertas de eventos y comité</Text>
               </View>
               <Switch
-                value={true} // Puedes conectarlo a un estado real si lo deseas
+                value={true}
                 onValueChange={() => {}}
-                trackColor={{ false: COLORS.border, true: COLORS.primaryLight }}
-                thumbColor={COLORS.primary}
+                trackColor={{ false: colors.border, true: colors.primaryLight }}
+                thumbColor={colors.primary}
               />
             </View>
             <View style={styles.divider} />
@@ -273,21 +285,55 @@ const SettingsScreen = () => {
                 <Text style={styles.label}>Modo Oscuro</Text>
                 <Text style={styles.hintText}>Cambiar la apariencia de la aplicación</Text>
               </View>
-              
-              {/* ✅ 3. Switch conectado a la función que guarda en el backend */}
               <Switch
                 value={user.theme === 'dark'}
                 onValueChange={handleThemeChange}
-                trackColor={{ false: COLORS.border, true: COLORS.primaryLight }}
-                thumbColor={user.theme === 'dark' ? COLORS.primary : COLORS.textTertiary}
+                trackColor={{ false: colors.border, true: colors.primaryLight }}
+                thumbColor={user.theme === 'dark' ? colors.primary : colors.textTertiary}
                 disabled={savingTheme}
               />
             </View>
             
             {savingTheme && (
               <View style={styles.savingIndicator}>
-                <ActivityIndicator size="small" color={COLORS.primary} />
+                <ActivityIndicator size="small" color={colors.primary} />
                 <Text style={styles.savingText}>Guardando preferencia...</Text>
+              </View>
+            )}
+
+            <View style={styles.divider} />
+
+            {/* ✅ Selector de color de acento personal */}
+            <Text style={styles.label}>Color de Acento</Text>
+            <Text style={styles.hintText}>Elige el color principal de tu app</Text>
+
+            <View style={styles.colorGrid}>
+              {ACCENT_PRESETS.map((preset) => {
+                const isSelected = accentColor?.toLowerCase() === preset.value.toLowerCase();
+                return (
+                  <TouchableOpacity
+                    key={preset.value}
+                    onPress={() => handleAccentColorChange(preset.value)}
+                    disabled={savingColor}
+                    style={[
+                      styles.colorSwatch,
+                      { backgroundColor: preset.value },
+                      isSelected && styles.colorSwatchSelected
+                    ]}
+                    activeOpacity={0.7}
+                  >
+                    {isSelected && (
+                      <Ionicons name="checkmark" size={20} color="#FFFFFF" />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {savingColor && (
+              <View style={styles.savingIndicator}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={styles.savingText}>Guardando color...</Text>
               </View>
             )}
           </View>
@@ -302,27 +348,27 @@ const SettingsScreen = () => {
                 <Text style={styles.itemTitle}>Telegram</Text>
                 <Text style={styles.itemSubtitle}>Gestionar notificaciones por Telegram</Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color={COLORS.textTertiary} />
+              <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
             </TouchableOpacity>
           </View>
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Soporte</Text>
             <TouchableOpacity style={styles.settingItem} onPress={() => Alert.alert('Soporte', 'Contacta a: sistemas@cidtec-uc.com')} activeOpacity={0.7}>
-              <View style={[styles.iconBox, { backgroundColor: COLORS.success + '20' }]}>
-                <Ionicons name="help-circle-outline" size={20} color={COLORS.success} />
+              <View style={[styles.iconBox, { backgroundColor: colors.success + '20' }]}>
+                <Ionicons name="help-circle-outline" size={20} color={colors.success} />
               </View>
               <View style={styles.itemContent}>
                 <Text style={styles.itemTitle}>Centro de Ayuda</Text>
                 <Text style={styles.itemSubtitle}>Preguntas frecuentes y contacto</Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color={COLORS.textTertiary} />
+              <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
             </TouchableOpacity>
           </View>
 
           <View style={styles.actions}>
             <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.8}>
-              <Ionicons name="log-out-outline" size={20} color={COLORS.white} />
+              <Ionicons name="log-out-outline" size={20} color="#FFFFFF" />
               <Text style={styles.logoutButtonText}>Cerrar Sesión</Text>
             </TouchableOpacity>
           </View>
@@ -334,18 +380,19 @@ const SettingsScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
+// ✅ Los estilos ahora son una función que recibe la paleta dinámica
+const createStyles = (colors) => StyleSheet.create({
   container: { flex: 1 },
   scrollView: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { marginTop: 10, fontSize: 16 },
   formContainer: { padding: 20, paddingBottom: 40 },
   section: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 20,
     marginBottom: 20,
-    shadowColor: COLORS.shadow,
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
@@ -354,57 +401,57 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 20,
     paddingBottom: 10,
     borderBottomWidth: 2,
-    borderBottomColor: COLORS.primaryLight,
+    borderBottomColor: colors.primaryLight,
   },
   inputGroup: { marginBottom: 16 },
-  label: { fontSize: 14, fontWeight: '600', color: COLORS.textPrimary, marginBottom: 8 },
+  label: { fontSize: 14, fontWeight: '600', color: colors.textPrimary, marginBottom: 8 },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     borderRadius: 10,
     paddingHorizontal: 15,
     height: 50,
   },
-  inputText: { flex: 1, fontSize: 16, color: COLORS.textPrimary, marginLeft: 10 },
-  hintText: { fontSize: 12, color: COLORS.textTertiary, marginTop: 2 },
+  inputText: { flex: 1, fontSize: 16, color: colors.textPrimary, marginLeft: 10 },
+  hintText: { fontSize: 12, color: colors.textTertiary, marginTop: 2 },
   switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10 },
   switchLabel: { flex: 1 },
-  divider: { height: 1, backgroundColor: COLORS.border, marginVertical: 15 },
+  divider: { height: 1, backgroundColor: colors.border, marginVertical: 15 },
   settingItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
   iconBox: { width: 40, height: 40, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
   itemContent: { flex: 1 },
-  itemTitle: { fontSize: 15, fontWeight: '600', color: COLORS.textPrimary, marginBottom: 2 },
-  itemSubtitle: { fontSize: 12, color: COLORS.textTertiary },
+  itemTitle: { fontSize: 15, fontWeight: '600', color: colors.textPrimary, marginBottom: 2 },
+  itemSubtitle: { fontSize: 12, color: colors.textTertiary },
   actions: { marginTop: 10 },
   editProfileButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     borderRadius: 10,
     paddingVertical: 12,
     marginTop: 10,
     gap: 8,
   },
-  editProfileButtonText: { fontSize: 15, fontWeight: '600', color: COLORS.white },
+  editProfileButtonText: { fontSize: 15, fontWeight: '600' },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.accent,
+    backgroundColor: colors.error,
     borderRadius: 10,
     paddingVertical: 15,
     gap: 8,
   },
-  logoutButtonText: { fontSize: 16, fontWeight: '600', color: COLORS.white },
-  versionText: { textAlign: 'center', fontSize: 12, color: COLORS.textTertiary, marginTop: 20 },
+  logoutButtonText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
+  versionText: { textAlign: 'center', fontSize: 12, color: colors.textTertiary, marginTop: 20 },
   savingIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -414,8 +461,28 @@ const styles = StyleSheet.create({
   },
   savingText: {
     fontSize: 12,
-    color: COLORS.textTertiary,
+    color: colors.textTertiary,
     fontStyle: 'italic',
+  },
+  // ✅ Nuevos estilos para el selector de color
+  colorGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 14,
+    marginTop: 14,
+  },
+  colorSwatch: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  colorSwatchSelected: {
+    borderColor: colors.textPrimary,
+    transform: [{ scale: 1.1 }],
   },
 });
 

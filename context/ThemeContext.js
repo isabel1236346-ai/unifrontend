@@ -2,23 +2,27 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { useColorScheme as useSystemColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { buildPalette, DEFAULT_ACCENT_COLOR } from '../utils/colorUtils';
 
 const ThemeContext = createContext();
 
 export const AppThemeProvider = ({ children }) => {
   const systemColorScheme = useSystemColorScheme();
   // 'light', 'dark', o 'system'
-  const [theme, setThemeState] = useState('system'); 
+  const [theme, setThemeState] = useState('system');
+  // color de acento personalizado por usuario (hex)
+  const [accentColor, setAccentColorState] = useState(DEFAULT_ACCENT_COLOR);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 1. Cargar preferencia guardada al iniciar la app
+  // 1. Cargar preferencias guardadas al iniciar la app (cache local, luego el perfil del
+  //    backend las sobreescribe cuando el usuario inicia sesión, ver loadUserData en Settings)
   useEffect(() => {
     const loadTheme = async () => {
       try {
         const savedTheme = await AsyncStorage.getItem('appTheme');
-        if (savedTheme) {
-          setThemeState(savedTheme);
-        }
+        const savedAccent = await AsyncStorage.getItem('appAccentColor');
+        if (savedTheme) setThemeState(savedTheme);
+        if (savedAccent) setAccentColorState(savedAccent);
       } catch (e) {
         console.error("Error al cargar el tema:", e);
       } finally {
@@ -28,7 +32,7 @@ export const AppThemeProvider = ({ children }) => {
     loadTheme();
   }, []);
 
-  // 2. Función para cambiar y guardar el tema
+  // 2. Cambiar y cachear el modo claro/oscuro
   const setTheme = async (newTheme) => {
     setThemeState(newTheme);
     try {
@@ -38,17 +42,40 @@ export const AppThemeProvider = ({ children }) => {
     }
   };
 
-  // 3. Determinar el esquema de color real (light o dark)
+  // 3. Cambiar y cachear el color de acento
+  const setAccentColor = async (newColor) => {
+    setAccentColorState(newColor);
+    try {
+      await AsyncStorage.setItem('appAccentColor', newColor);
+    } catch (e) {
+      console.error("Error al guardar el color de acento:", e);
+    }
+  };
+
+  // 4. Esquema de color real (light o dark)
   const colorScheme = theme === 'system' ? (systemColorScheme || 'light') : theme;
 
+  // 5. Paleta completa derivada del color de acento + el modo
+  const colors = buildPalette(accentColor, colorScheme);
+
   return (
-    <ThemeContext.Provider value={{ theme, colorScheme, setTheme, isLoading }}>
+    <ThemeContext.Provider
+      value={{
+        theme,
+        colorScheme,
+        setTheme,
+        accentColor,
+        setAccentColor,
+        colors,
+        isLoading,
+      }}
+    >
       {children}
     </ThemeContext.Provider>
   );
 };
 
-// Hook personalizado para usar el tema fácilmente en cualquier pantalla
+// Hook personalizado
 export const useTheme = () => {
   const context = useContext(ThemeContext);
   if (!context) {
