@@ -18,7 +18,7 @@ import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const API_BASE_URL = 'https://unibackend-production.up.railway.app';
-const TOKEN_KEY = 'adminAuthToken'; // Cambia a 'academicoAuthToken' si es necesario
+const TOKEN_KEY = 'adminAuthToken'; 
 
 const COLORS = {
   primary: '#E95A0C',
@@ -66,9 +66,9 @@ const deleteTokenAsync = async () => {
 const SettingsScreen = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState({ nombre: '', email: '', role: '' });
+  // ✅ Agregamos 'id' al estado para poder usarlo en la navegación
+  const [user, setUser] = useState({ id: null, nombre: '', email: '', role: '' });
   
-  // Preferencias locales (puedes conectarlas a tu backend o AsyncStorage después)
   const [notificacionesActivas, setNotificacionesActivas] = useState(true);
   const [modoOscuro, setModoOscuro] = useState(false);
 
@@ -80,7 +80,7 @@ const SettingsScreen = () => {
     try {
       const token = await getTokenAsync();
       if (!token) {
-        router.replace('/'); // ⚠️ Ajusta a tu ruta de login real (ej: '/LoginAdmin')
+        router.replace('/'); 
         return;
       }
 
@@ -89,6 +89,7 @@ const SettingsScreen = () => {
       });
 
       setUser({
+        id: response.data.id || response.data.idusuario || null, // ✅ Capturamos el ID
         nombre: `${response.data.nombre || ''} ${response.data.apellidopat || ''}`.trim() || 'Usuario',
         email: response.data.email || 'sin-email@ejemplo.com',
         role: response.data.role || 'admin',
@@ -104,7 +105,7 @@ const SettingsScreen = () => {
     const performLogout = async () => {
       try {
         await deleteTokenAsync();
-        router.replace('/'); // ⚠️ Ajusta a tu ruta de login real
+        router.replace('/'); 
       } catch (error) {
         console.error('Error al cerrar sesión:', error);
         router.replace('/');
@@ -189,18 +190,23 @@ const SettingsScreen = () => {
                 </Text>
               </View>
             </View>
+
+            {/* ✅ Botón corregido para editar el propio perfil */}
             <TouchableOpacity
-                      onPress={() => 
-                        {
-                          console.log('Intentando navegar a:', `/admin/editUser/${item.id}`);
-                         // router.push(`/admin/EditUser/${item.id}`);
-                         router.push(`/admin/editUser/${item.id}`)
-                        }}
-                      style={[styles.actionButton, styles.editButton]}
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons name="pencil-outline" size={20} color={COLORS.warning} />
-                    </TouchableOpacity>
+              onPress={() => {
+                if (!user.id) {
+                  Alert.alert('Error', 'No se pudo identificar tu ID de usuario.');
+                  return;
+                }
+                console.log('Navegando a editar perfil con ID:', user.id);
+                router.push(`/admin/editUser/${user.id}`);
+              }}
+              style={styles.editProfileButton}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="pencil-outline" size={20} color={COLORS.white} />
+              <Text style={styles.editProfileButtonText}>Editar mi Perfil</Text>
+            </TouchableOpacity>
           </View>
 
           {/* Sección: Preferencias */}
@@ -301,7 +307,6 @@ const SettingsScreen = () => {
   );
 };
 
-// Estilos extraídos y adaptados directamente de tu EditUser para mantener consistencia
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -416,6 +421,22 @@ const styles = StyleSheet.create({
   },
   actions: {
     marginTop: 10,
+  },
+  // ✅ Estilos nuevos para el botón de editar perfil
+  editProfileButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.primary,
+    borderRadius: 10,
+    paddingVertical: 12,
+    marginTop: 10,
+    gap: 8,
+  },
+  editProfileButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: COLORS.white,
   },
   logoutButton: {
     flexDirection: 'row',
