@@ -189,6 +189,18 @@ const SettingsScreen = () => {
                 </Text>
               </View>
             </View>
+            <TouchableOpacity
+                      onPress={() => 
+                        {
+                          console.log('Intentando navegar a:', `/admin/editUser/${item.id}`);
+                         // router.push(`/admin/EditUser/${item.id}`);
+                         router.push(`/admin/editUser/${item.id}`)
+                        }}
+                      style={[styles.actionButton, styles.editButton]}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="pencil-outline" size={20} color={COLORS.warning} />
+                    </TouchableOpacity>
           </View>
 
           {/* Sección: Preferencias */}
