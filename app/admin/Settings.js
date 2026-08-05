@@ -3,22 +3,22 @@ import {
   StyleSheet,
   View,
   Text,
-  ScrollView,
   TouchableOpacity,
-  StatusBar,
   Alert,
-  Switch,
   ActivityIndicator,
-  Platform
+  SafeAreaView,
+  ScrollView,
+  Platform,
+  Switch
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const API_BASE_URL = 'https://unibackend-production.up.railway.app';
-const TOKEN_KEY = 'adminAuthToken'; // Cambia a 'academicoAuthToken' si usas una clave diferente
+const TOKEN_KEY = 'adminAuthToken'; // Cambia a 'academicoAuthToken' si es necesario
 
 const COLORS = {
   primary: '#E95A0C',
@@ -38,6 +38,7 @@ const COLORS = {
   shadow: 'rgba(0, 0, 0, 0.05)',
   white: '#FFFFFF',
   black: '#000000',
+  error: '#DC2626',
 };
 
 const getTokenAsync = async () => {
@@ -67,9 +68,9 @@ const SettingsScreen = () => {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState({ nombre: '', email: '', role: '' });
   
-  // Preferencias locales
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [isTelegramLinked, setIsTelegramLinked] = useState(false);
+  // Preferencias locales (puedes conectarlas a tu backend o AsyncStorage después)
+  const [notificacionesActivas, setNotificacionesActivas] = useState(true);
+  const [modoOscuro, setModoOscuro] = useState(false);
 
   useEffect(() => {
     loadUserData();
@@ -79,7 +80,7 @@ const SettingsScreen = () => {
     try {
       const token = await getTokenAsync();
       if (!token) {
-        router.replace('/');
+        router.replace('/'); // ⚠️ Ajusta a tu ruta de login real (ej: '/LoginAdmin')
         return;
       }
 
@@ -90,13 +91,8 @@ const SettingsScreen = () => {
       setUser({
         nombre: `${response.data.nombre || ''} ${response.data.apellidopat || ''}`.trim() || 'Usuario',
         email: response.data.email || 'sin-email@ejemplo.com',
-        role: response.data.role || 'academico',
+        role: response.data.role || 'admin',
       });
-
-      const chatId = response.data.telegram_chat_id;
-      const hasTelegram = chatId !== null && chatId !== undefined && chatId !== '' && chatId !== 'null';
-      setIsTelegramLinked(hasTelegram);
-
     } catch (error) {
       console.error('Error al cargar perfil en settings:', error);
     } finally {
@@ -108,7 +104,7 @@ const SettingsScreen = () => {
     const performLogout = async () => {
       try {
         await deleteTokenAsync();
-        router.replace('/');
+        router.replace('/'); // ⚠️ Ajusta a tu ruta de login real
       } catch (error) {
         console.error('Error al cerrar sesión:', error);
         router.replace('/');
@@ -134,115 +130,123 @@ const SettingsScreen = () => {
   const handleTelegramPress = () => {
     Alert.alert(
       'Integración con Telegram',
-      isTelegramLinked 
-        ? 'Tu cuenta ya está vinculada a Telegram. Puedes gestionarla o desvincularla desde el icono de Telegram en la cabecera del Panel Principal.' 
-        : 'Para vincular Telegram, ve al Panel Principal y toca el icono de avión de papel en la cabecera.',
+      'Para vincular o gestionar tu cuenta de Telegram, ve al Panel Principal y toca el icono de avión de papel en la cabecera.',
       [{ text: 'Entendido', style: 'default' }]
     );
   };
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Cargando configuración...</Text>
-      </View>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={styles.loadingText}>Cargando configuración...</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.surface} />
-      
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton} activeOpacity={0.7}>
-          <Ionicons name="arrow-back" size={24} color={COLORS.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Ajustes</Text>
-        <View style={{ width: 40 }} /> {/* Espaciador para centrar el título */}
-      </View>
+    <SafeAreaView style={styles.container}>
+      <Stack.Screen
+        options={{
+          title: 'Ajustes',
+          headerStyle: { backgroundColor: COLORS.primary },
+          headerTintColor: '#fff',
+          headerTitleStyle: { fontWeight: 'bold' },
+        }}
+      />
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
-        
-        {/* Sección: Cuenta */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Cuenta</Text>
-          <View style={styles.card}>
-            <TouchableOpacity style={styles.settingItem} onPress={() => router.push('/admin/Perfil')} activeOpacity={0.7}>
-              <View style={[styles.iconBox, { backgroundColor: COLORS.primaryLight }]}>
-                <Ionicons name="person-outline" size={22} color={COLORS.primary} />
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <View style={styles.formContainer}>
+          
+          {/* Sección: Mi Cuenta */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Mi Cuenta</Text>
+            
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Nombre Completo</Text>
+              <View style={styles.inputContainer}>
+                <Ionicons name="person-outline" size={20} color={COLORS.textSecondary} />
+                <Text style={styles.inputText}>{user.nombre}</Text>
               </View>
-              <View style={styles.itemContent}>
-                <Text style={styles.itemTitle}>Perfil de Usuario</Text>
-                <Text style={styles.itemSubtitle}>{user.nombre}</Text>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Correo Electrónico</Text>
+              <View style={styles.inputContainer}>
+                <Ionicons name="mail-outline" size={20} color={COLORS.textSecondary} />
+                <Text style={styles.inputText}>{user.email}</Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color={COLORS.textTertiary} />
-            </TouchableOpacity>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Rol Actual</Text>
+              <View style={styles.inputContainer}>
+                <Ionicons name="shield-checkmark-outline" size={20} color={COLORS.success} />
+                <Text style={[styles.inputText, { color: COLORS.success, fontWeight: '600' }]}>
+                  {user.role.toUpperCase()}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Sección: Preferencias */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Preferencias</Text>
+
+            <View style={styles.switchRow}>
+              <View style={styles.switchLabel}>
+                <Text style={styles.label}>Notificaciones</Text>
+                <Text style={styles.hintText}>Recibir alertas de eventos y comité</Text>
+              </View>
+              <Switch
+                value={notificacionesActivas}
+                onValueChange={setNotificacionesActivas}
+                trackColor={{ false: COLORS.border, true: COLORS.primaryLight }}
+                thumbColor={notificacionesActivas ? COLORS.primary : COLORS.textTertiary}
+              />
+            </View>
 
             <View style={styles.divider} />
 
-            <TouchableOpacity style={styles.settingItem} onPress={() => router.push('/admin/CambiarPassword')} activeOpacity={0.7}>
-              <View style={[styles.iconBox, { backgroundColor: COLORS.warning + '20' }]}>
-                <Ionicons name="lock-closed-outline" size={22} color={COLORS.warning} />
-              </View>
-              <View style={styles.itemContent}>
-                <Text style={styles.itemTitle}>Cambiar Contraseña</Text>
-                <Text style={styles.itemSubtitle}>Actualiza tu contraseña de acceso</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={COLORS.textTertiary} />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Sección: Preferencias */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Preferencias</Text>
-          <View style={styles.card}>
-            <View style={styles.settingItem}>
-              <View style={[styles.iconBox, { backgroundColor: COLORS.info + '20' }]}>
-                <Ionicons name="notifications-outline" size={22} color={COLORS.info} />
-              </View>
-              <View style={styles.itemContent}>
-                <Text style={styles.itemTitle}>Notificaciones</Text>
-                <Text style={styles.itemSubtitle}>Recibir alertas de eventos y comité</Text>
+            <View style={styles.switchRow}>
+              <View style={styles.switchLabel}>
+                <Text style={styles.label}>Modo Oscuro</Text>
+                <Text style={styles.hintText}>Cambiar la apariencia de la aplicación</Text>
               </View>
               <Switch
-                value={notificationsEnabled}
-                onValueChange={setNotificationsEnabled}
+                value={modoOscuro}
+                onValueChange={setModoOscuro}
                 trackColor={{ false: COLORS.border, true: COLORS.primaryLight }}
-                thumbColor={notificationsEnabled ? COLORS.primary : COLORS.textTertiary}
+                thumbColor={modoOscuro ? COLORS.primary : COLORS.textTertiary}
               />
             </View>
           </View>
-        </View>
 
-        {/* Sección: Integraciones */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Integraciones</Text>
-          <View style={styles.card}>
+          {/* Sección: Integraciones */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Integraciones</Text>
+
             <TouchableOpacity style={styles.settingItem} onPress={handleTelegramPress} activeOpacity={0.7}>
               <View style={[styles.iconBox, { backgroundColor: '#E3F2FD' }]}>
-                <Ionicons name="send" size={22} color="#0088cc" />
+                <Ionicons name="send" size={20} color="#0088cc" />
               </View>
               <View style={styles.itemContent}>
                 <Text style={styles.itemTitle}>Telegram</Text>
-                <Text style={styles.itemSubtitle}>
-                  {isTelegramLinked ? 'Vinculado correctamente ✓' : 'No vinculado'}
-                </Text>
+                <Text style={styles.itemSubtitle}>Gestionar notificaciones por Telegram</Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={COLORS.textTertiary} />
             </TouchableOpacity>
           </View>
-        </View>
 
-        {/* Sección: Soporte */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Soporte</Text>
-          <View style={styles.card}>
+          {/* Sección: Soporte y Acerca de */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Soporte</Text>
+
             <TouchableOpacity style={styles.settingItem} onPress={() => Alert.alert('Soporte', 'Para ayuda, contacta a: sistemas@cidtec-uc.com')} activeOpacity={0.7}>
               <View style={[styles.iconBox, { backgroundColor: COLORS.success + '20' }]}>
-                <Ionicons name="help-circle-outline" size={22} color={COLORS.success} />
+                <Ionicons name="help-circle-outline" size={20} color={COLORS.success} />
               </View>
               <View style={styles.itemContent}>
                 <Text style={styles.itemTitle}>Centro de Ayuda</Text>
@@ -255,7 +259,7 @@ const SettingsScreen = () => {
 
             <TouchableOpacity style={styles.settingItem} onPress={() => Alert.alert('Acerca de', 'Sistema de Gestión de Eventos Universitarios\nVersión 1.2.0')} activeOpacity={0.7}>
               <View style={[styles.iconBox, { backgroundColor: COLORS.secondary + '20' }]}>
-                <Ionicons name="information-circle-outline" size={22} color={COLORS.secondary} />
+                <Ionicons name="information-circle-outline" size={20} color={COLORS.secondary} />
               </View>
               <View style={styles.itemContent}>
                 <Text style={styles.itemTitle}>Acerca de</Text>
@@ -264,89 +268,118 @@ const SettingsScreen = () => {
               <Ionicons name="chevron-forward" size={20} color={COLORS.textTertiary} />
             </TouchableOpacity>
           </View>
-        </View>
 
-        {/* Sección: Cierre de Sesión */}
-        <View style={styles.section}>
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.8}>
-            <Ionicons name="log-out-outline" size={22} color={COLORS.white} />
-            <Text style={styles.logoutText}>Cerrar Sesión</Text>
-          </TouchableOpacity>
+          {/* Botón de Cierre de Sesión */}
+          <View style={styles.actions}>
+            <TouchableOpacity
+              style={styles.logoutButton}
+              onPress={handleLogout}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="log-out-outline" size={20} color={COLORS.white} />
+              <Text style={styles.logoutButtonText}>Cerrar Sesión</Text>
+            </TouchableOpacity>
+          </View>
+          
           <Text style={styles.versionText}>Desarrollado por CIDTEC-UC</Text>
-        </View>
 
+        </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
 
+// Estilos extraídos y adaptados directamente de tu EditUser para mantener consistencia
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: COLORS.textSecondary,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
-    paddingBottom: 16,
-    backgroundColor: COLORS.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  backButton: {
-    padding: 8,
-    borderRadius: 8,
-    marginLeft: -8,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-  },
   scrollView: {
     flex: 1,
   },
-  section: {
-    marginTop: 24,
-    paddingHorizontal: 20,
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: '700',
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
     color: COLORS.textSecondary,
-    marginBottom: 8,
-    marginLeft: 4,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
-  card: {
+  formContainer: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+  section: {
     backgroundColor: COLORS.surface,
-    borderRadius: 16,
-    overflow: 'hidden',
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 20,
     shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 6,
+    shadowRadius: 3.84,
     elevation: 3,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    marginBottom: 20,
+    paddingBottom: 10,
+    borderBottomWidth: 2,
+    borderBottomColor: COLORS.primaryLight,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+    marginBottom: 8,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    height: 50,
+  },
+  inputText: {
+    flex: 1,
+    fontSize: 16,
+    color: COLORS.textPrimary,
+    marginLeft: 10,
+  },
+  hintText: {
+    fontSize: 12,
+    color: COLORS.textTertiary,
+    marginTop: 2,
+  },
+  switchRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  switchLabel: {
+    flex: 1,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: COLORS.border,
+    marginVertical: 15,
   },
   settingItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    paddingVertical: 10,
   },
   iconBox: {
     width: 40,
@@ -354,7 +387,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 15,
   },
   itemContent: {
     flex: 1,
@@ -366,39 +399,31 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   itemSubtitle: {
-    fontSize: 13,
+    fontSize: 12,
     color: COLORS.textTertiary,
   },
-  divider: {
-    height: 1,
-    backgroundColor: COLORS.border,
-    marginLeft: 68, // Alineado visualmente con el texto (40 icono + 12 margin + 16 padding)
+  actions: {
+    marginTop: 10,
   },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.accent,
-    paddingVertical: 16,
-    borderRadius: 16,
-    marginTop: 8,
-    shadowColor: COLORS.accent,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    borderRadius: 10,
+    paddingVertical: 15,
+    gap: 8,
   },
-  logoutText: {
-    color: COLORS.white,
+  logoutButtonText: {
     fontSize: 16,
-    fontWeight: '700',
-    marginLeft: 8,
+    fontWeight: '600',
+    color: COLORS.white,
   },
   versionText: {
     textAlign: 'center',
     fontSize: 12,
     color: COLORS.textTertiary,
-    marginTop: 16,
+    marginTop: 20,
   },
 });
 
