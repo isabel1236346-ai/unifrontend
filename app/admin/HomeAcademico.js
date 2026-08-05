@@ -1722,10 +1722,10 @@ const handleActionPress = (action) => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    //backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   committeeSection: {
   width: '100%',
@@ -1736,7 +1736,7 @@ const styles = StyleSheet.create({
   notificationBell: {
     padding: 8,
     borderRadius: 20,
-    //backgroundColor: colors.background,
+    backgroundColor: colors.background,
   },
    committeeTabsContainer: {
     marginBottom: 16,
@@ -1758,10 +1758,10 @@ const styles = StyleSheet.create({
   committeeTabText: {
     fontSize: 13,
     fontWeight: '600',
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   committeeTabTextActive: {
-    color: COLORS.white,
+    color: colors.white,
   },
   emptyState: {
     alignItems: 'center',
@@ -1777,30 +1777,30 @@ const styles = StyleSheet.create({
   },
   eventDateText: {
     fontSize: 12,
-    color: COLORS.textTertiary,
+    color: colors.textTertiary,
     fontWeight: '500',
   },
   emptyStateText: {
     marginTop: 12,
     fontSize: 14,
-    color: COLORS.textTertiary,
+    color: colors.textTertiary,
     textAlign: 'center',
   },
   notificationBadge: {
     position: 'absolute',
     top: 4,
     right: 4,
-    backgroundColor: COLORS.accent,
+    backgroundColor: colors.accent,
     borderRadius: 10,
     minWidth: 18,
     height: 18,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: COLORS.white,
+    borderColor: colors.white,
   },
   notificationBadgeText: {
-    color: COLORS.white,
+    color: colors.white,
     fontSize: 10,
     fontWeight: 'bold',
     paddingHorizontal: 2,
@@ -1811,7 +1811,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   notificationsModalContent: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '85%',
@@ -1823,12 +1823,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: colors.border,
   },
   notificationsModalTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   notificationsList: {
     flex: 1,
@@ -1841,20 +1841,20 @@ const styles = StyleSheet.create({
   emptyNotificationsText: {
     marginTop: 12,
     fontSize: 14,
-    color: COLORS.textTertiary,
+    color: colors.textTertiary,
   },
   notificationItem: {
     flexDirection: 'row',
     paddingVertical: 14,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.divider,
+    borderBottomColor: colors.divider,
     gap: 12,
   },
   notificationItemUnread: {
-    backgroundColor: COLORS.primaryLight + '30',
+    backgroundColor: colors.primaryLight + '30',
     borderLeftWidth: 3,
-    borderLeftColor: COLORS.primary,
+    borderLeftColor: colors.primary,
   },
   notificationIconContainer: {
     position: 'relative',
@@ -1867,7 +1867,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: COLORS.accent,
+    backgroundColor: colors.accent,
   },
   notificationContent: {
     flex: 1,
@@ -1875,7 +1875,7 @@ const styles = StyleSheet.create({
   notificationTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   notificationTitleUnread: {
@@ -1883,24 +1883,24 @@ const styles = StyleSheet.create({
   },
   notificationMessage: {
     fontSize: 13,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     lineHeight: 18,
     marginBottom: 6,
   },
   notificationTime: {
     fontSize: 11,
-    color: COLORS.textTertiary,
+    color: colors.textTertiary,
   },
   markAllReadButton: {
     padding: 16,
     alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    borderTopColor: colors.border,
   },
   markAllReadText: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.primary,
+    color: colors.primary,
   },
   minimalHeaderTop: {
     flexDirection: 'row',
@@ -1911,18 +1911,18 @@ const styles = StyleSheet.create({
 tableRow: {
   flexDirection: 'row',
   alignItems: 'center',
-  backgroundColor: COLORS.surface,
+  backgroundColor: colors.surface,
   borderRadius: 12,
   paddingVertical: 12,
   paddingHorizontal: 16,
   marginBottom: 8,
-  shadowColor: COLORS.shadow,
+  shadowColor: colors.shadow,
   shadowOffset: { width: 0, height: 1 },
   shadowOpacity: 0.05,
   shadowRadius: 2,
   elevation: 1,
   borderLeftWidth: 3,
-  borderLeftColor: COLORS.primary,
+  borderLeftColor: colors.primary,
 },
 tableCellStatus: {
   width: 80,
@@ -1950,12 +1950,12 @@ tableCellName: {
 tableEventName: {
   fontSize: 15,
   fontWeight: '700',
-  color: COLORS.textPrimary,
+  color: colors.textPrimary,
   marginBottom: 2,
 },
 tableEventDescription: {
   fontSize: 12,
-  color: COLORS.textTertiary,
+  color: colors.textTertiary,
 },
 tableCellRole: {
   width: 90,
@@ -1966,7 +1966,7 @@ roleBadge: {
   flexDirection: 'row',
   alignItems: 'center',
   gap: 4,
-  backgroundColor: COLORS.primaryLight,
+  backgroundColor: colors.primaryLight,
   paddingHorizontal: 8,
   paddingVertical: 4,
   borderRadius: 12,
@@ -1974,20 +1974,20 @@ roleBadge: {
 roleBadgeText: {
   fontSize: 11,
   fontWeight: '600',
-  color: COLORS.primary,
+  color: colors.primary,
 },
 eventCard: {
-  backgroundColor: COLORS.surface,
+  backgroundColor: colors.surface,
   borderRadius: 16,
   padding: 16,
   marginBottom: 12,
-  shadowColor: COLORS.shadow,
+  shadowColor: colors.shadow,
   shadowOffset: { width: 0, height: 2 },
   shadowOpacity: 0.1,
   shadowRadius: 8,
   elevation: 4,
   borderLeftWidth: 4,
-  borderLeftColor: COLORS.primary,
+  borderLeftColor: colors.primary,
 },
 eventCardHeader: {
   flexDirection: 'row',
@@ -2001,17 +2001,17 @@ eventCardTextContainer: {
 eventTitle: {
   fontSize: 16,
   fontWeight: '700',
-  color: COLORS.textPrimary,
+  color: colors.textPrimary,
   flex: 1,
 },
 eventSubtitle: {
   fontSize: 12,
-  color: COLORS.textSecondary,
+  color: colors.textSecondary,
   marginTop: 2,
 },
 eventDescription: {
   fontSize: 14,
-  color: COLORS.textTertiary,
+  color: colors.textTertiary,
   lineHeight: 20,
   marginBottom: 8,
 },
@@ -2019,7 +2019,7 @@ eventRoleBadge: {
   flexDirection: 'row',
   alignItems: 'center',
   gap: 6,
-  backgroundColor: COLORS.primaryLight,
+  backgroundColor: colors.primaryLight,
   borderRadius: 20,
   paddingHorizontal: 12,
   paddingVertical: 4,
@@ -2043,10 +2043,10 @@ eventStatusText: {
 eventRoleBadgeText: {
   fontSize: 12,
   fontWeight: '600',
-  color: COLORS.primary,
+  color: colors.primary,
 },
 eventRoleBadge: {
-  backgroundColor: COLORS.primaryLight,
+  backgroundColor: colors.primaryLight,
   borderRadius: 8,
   paddingHorizontal: 8,
   paddingVertical: 4,
@@ -2056,7 +2056,7 @@ eventRoleBadge: {
 eventRoleBadgeText: {
   fontSize: 10,
   fontWeight: '600',
-  color: COLORS.primary,
+  color: colors.primary,
 },
   scrollView: {
     flex: 1,
@@ -2089,17 +2089,17 @@ iconContainer: {
 cardValue: {
   fontSize: 32,
   fontWeight: '800',
-  color: COLORS.textPrimary,
+  color: colors.textPrimary,
 },
 cardTitle: {
   fontSize: 15,
   fontWeight: '700',
-  color: COLORS.textPrimary,
+  color: colors.textPrimary,
   marginTop: 12,
 },
 cardDescription: {
   fontSize: 12,
-  color: COLORS.textTertiary,
+  color: colors.textTertiary,
   marginTop: 4,
 },
   minimalHeaderContainer: {
@@ -2107,10 +2107,10 @@ cardDescription: {
     paddingHorizontal: 24,
     paddingTop: (StatusBar.currentHeight || 0) + 24,
     paddingBottom: 24,
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderColor: COLORS.border,
-    shadowColor: COLORS.shadow,
+    borderColor: colors.border,
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -2144,7 +2144,7 @@ cardTrendText: {
   minimalHeaderAdminText: {
     fontSize: 16,
     fontWeight: '600',
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   minimalNotificationButton: {
     position: 'relative',
@@ -2153,24 +2153,24 @@ cardTrendText: {
   minimalUserFacultyText: {
   fontSize: 16,
   fontWeight: '600',
-  color: COLORS.textSecondary,
+  color: colors.textSecondary,
   marginBottom: 8,
 },
   minimalNotificationBadge: {
     position: 'absolute',
     top: -2,
     right: -2,
-    backgroundColor: COLORS.accent,
+    backgroundColor: colors.accent,
     borderRadius: 10,
     minWidth: 18,
     height: 18,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: COLORS.white,
+    borderColor: colors.surface,
   },
   minimalNotificationBadgeText: {
-    color: COLORS.white,
+    color: colors.surface,
     fontSize: 10,
     fontWeight: 'bold',
   },
@@ -2183,17 +2183,17 @@ cardTrendText: {
   minimalGreetingText: {
     fontSize: 22,
     fontWeight: '500',
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   minimalUserNameText: {
     fontSize: 22,
     fontWeight: '700',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   minimalHeaderTitle: {
     fontSize: 28,
     fontWeight: '800',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   sectionHeaderMinimal: {
     marginBottom: 24,
@@ -2202,12 +2202,12 @@ cardTrendText: {
   sectionTitleMinimal: {
     fontSize: 24,
     fontWeight: '700',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 6,
   },
   sectionSubtitleMinimal: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   dashboardSectionMinimal: {
     width: '100%',
@@ -2221,10 +2221,10 @@ cardTrendText: {
     justifyContent: 'space-between',
   },
   dashboardCardMinimal: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 16,
-    shadowColor: COLORS.shadow,
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 6,
@@ -2241,12 +2241,12 @@ cardTrendText: {
   dashboardCardValueMinimal: {
     fontSize: 24,
     fontWeight: '800',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   dashboardCardTitleMinimal: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginBottom: 4,
   },
   dashboardCardTrendMinimal: {
@@ -2261,7 +2261,7 @@ cardTrendText: {
   },
   dashboardCardDescriptionMinimal: {
     fontSize: 11,
-    color: COLORS.textTertiary,
+    color: colors.textTertiary,
   },
   actionsSectionMinimal: {
     width: '100%',
@@ -2273,10 +2273,10 @@ cardTrendText: {
     width: '100%',
   },
   actionCardMinimal: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 16,
-    shadowColor: COLORS.shadow,
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 6,
@@ -2304,7 +2304,7 @@ cardTrendText: {
   actionCardTitleMinimal: {
     fontSize: 16,
     fontWeight: '700',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     flexShrink: 1,
   },
   actionCardBadgeMinimal: {
@@ -2315,11 +2315,11 @@ cardTrendText: {
   actionCardBadgeTextMinimal: {
     fontSize: 10,
     fontWeight: '600',
-    color: COLORS.white,
+    color: colors.white,
   },
   actionCardDescriptionMinimal: {
     fontSize: 12,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     lineHeight: 18,
   },
   loadingContainer: {
@@ -2331,17 +2331,17 @@ cardTrendText: {
   loadingText: {
     marginTop: 10,
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   minimalDockContainer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    shadowColor: COLORS.black,
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -2356,14 +2356,14 @@ cardTrendText: {
     gap: 8,
   },
   minimalDockToggleText: {
-    color: COLORS.white,
+    color: colors.white,
     fontSize: 16,
     fontWeight: '600',
   },
   minimalDockExpandedContent: {
     paddingHorizontal: 20,
     paddingBottom: 10,
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     position: 'absolute',
@@ -2392,7 +2392,7 @@ cardTrendText: {
   },
   minimalDockLogoutButton: {
     flexDirection: 'row',
-    backgroundColor: COLORS.accent,
+    backgroundColor: colors.accent,
     paddingVertical: 12,
     paddingHorizontal: 15,
     alignItems: 'center',
@@ -2401,18 +2401,18 @@ cardTrendText: {
     width: '100%',
   },
   minimalDockLogoutButtonText: {
-    color: COLORS.white,
+    color: colors.white,
     fontSize: 15,
     fontWeight: '600',
     marginLeft: 8,
   },
   chartContainer: {
   marginTop: 24,
-  backgroundColor: COLORS.surface,
+  backgroundColor: colors.surface,
   borderRadius: 16,
   padding: 16,
   alignItems: 'center',
-  shadowColor: COLORS.shadow,
+  shadowColor: colors.shadow,
   shadowOffset: { width: 0, height: 2 },
   shadowOpacity: 0.1,
   shadowRadius: 6,
@@ -2421,7 +2421,7 @@ cardTrendText: {
 chartTitle: {
   fontSize: 16,
   fontWeight: '700',
-  color: COLORS.textPrimary,
+  color: colors.textPrimary,
   marginBottom: 12,
 },
 chart: {
@@ -2431,7 +2431,7 @@ chart: {
 telegramBell: {
   padding: 8,
   borderRadius: 20,
-  backgroundColor: COLORS.background,
+  backgroundColor: colors.background,
   position: 'relative',
 },
 telegramLinkedDot: {
@@ -2441,9 +2441,9 @@ telegramLinkedDot: {
   width: 8,
   height: 8,
   borderRadius: 4,
-  backgroundColor: COLORS.success,
+  backgroundColor: colors.success,
   borderWidth: 1,
-  borderColor: COLORS.white,
+  borderColor: colors.white,
 },
 telegramModalOverlay: {
   flex: 1,
@@ -2453,7 +2453,7 @@ telegramModalOverlay: {
   padding: 20,
 },
 telegramModalContent: {
-  backgroundColor: COLORS.surface,
+  backgroundColor: colors.surface,
   borderRadius: 24,
   width: '100%',
   maxWidth: 500,
@@ -2465,14 +2465,14 @@ telegramModalHeader: {
   padding: 24,
   backgroundColor: '#E3F2FD',
   borderBottomWidth: 1,
-  borderBottomColor: COLORS.border,
+  borderBottomColor: colors.border,
   position: 'relative',
 },
 telegramIconContainer: {
   width: 80,
   height: 80,
   borderRadius: 40,
-  backgroundColor: COLORS.white,
+  backgroundColor: colors.white,
   justifyContent: 'center',
   alignItems: 'center',
   marginBottom: 12,
@@ -2480,7 +2480,7 @@ telegramIconContainer: {
 telegramModalTitle: {
   fontSize: 22,
   fontWeight: '700',
-  color: COLORS.textPrimary,
+  color: colors.textPrimary,
   textAlign: 'center',
 },
 telegramCloseButton: {
@@ -2499,17 +2499,17 @@ telegramLinkedInfo: {
 telegramLinkedText: {
   fontSize: 16,
   fontWeight: '600',
-  color: COLORS.textPrimary,
+  color: colors.textPrimary,
   marginTop: 12,
   textAlign: 'center',
 },
 telegramUsername: {
   fontSize: 14,
-  color: COLORS.textSecondary,
+  color: colors.textSecondary,
   marginTop: 4,
 },
 telegramBenefits: {
-  backgroundColor: COLORS.background,
+  backgroundColor: colors.background,
   borderRadius: 12,
   padding: 16,
   marginBottom: 24,
@@ -2517,7 +2517,7 @@ telegramBenefits: {
 telegramBenefitsTitle: {
   fontSize: 15,
   fontWeight: '700',
-  color: COLORS.textPrimary,
+  color: colors.textPrimary,
   marginBottom: 12,
 },
 telegramBenefitItem: {
@@ -2528,7 +2528,7 @@ telegramBenefitItem: {
 },
 telegramBenefitText: {
   fontSize: 14,
-  color: COLORS.textSecondary,
+  color: colors.textSecondary,
 },
 telegramUnlinkButton: {
   flexDirection: 'row',
@@ -2537,19 +2537,19 @@ telegramUnlinkButton: {
   gap: 8,
   padding: 14,
   borderRadius: 12,
-  backgroundColor: COLORS.accent + '15',
+  backgroundColor: colors.accent + '15',
   borderWidth: 1,
-  borderColor: COLORS.accent,
+  borderColor: colors.accent,
 },
 telegramUnlinkText: {
   fontSize: 15,
   fontWeight: '600',
-  color: COLORS.accent,
+  color: colors.accent,
 },
 telegramInstructions: {
   fontSize: 16,
   fontWeight: '600',
-  color: COLORS.textPrimary,
+  color: colors.textPrimary,
   marginBottom: 20,
   textAlign: 'center',
 },
@@ -2562,14 +2562,14 @@ telegramStepNumber: {
   width: 32,
   height: 32,
   borderRadius: 16,
-  backgroundColor: COLORS.primary,
+  backgroundColor: colors.primary,
   justifyContent: 'center',
   alignItems: 'center',
 },
 telegramStepNumberText: {
   fontSize: 16,
   fontWeight: '700',
-  color: COLORS.white,
+  color: colors.white,
 },
 telegramStepContent: {
   flex: 1,
@@ -2577,12 +2577,12 @@ telegramStepContent: {
 telegramStepTitle: {
   fontSize: 15,
   fontWeight: '700',
-  color: COLORS.textPrimary,
+  color: colors.textPrimary,
   marginBottom: 4,
 },
 telegramStepDescription: {
   fontSize: 13,
-  color: COLORS.textSecondary,
+  color: colors.textSecondary,
   lineHeight: 18,
   marginBottom: 8,
 },
@@ -2590,7 +2590,7 @@ telegramLinkButton: {
   flexDirection: 'row',
   alignItems: 'center',
   gap: 6,
-  backgroundColor: COLORS.primary + '10',
+  backgroundColor: colors.primary + '10',
   paddingHorizontal: 12,
   paddingVertical: 8,
   borderRadius: 8,
@@ -2599,19 +2599,19 @@ telegramLinkButton: {
 telegramLinkText: {
   fontSize: 13,
   fontWeight: '600',
-  color: COLORS.primary,
+  color: colors.primary,
 },
 telegramEmailBox: {
   backgroundColor: '#F3F4F6',
   padding: 10,
   borderRadius: 8,
   borderLeftWidth: 3,
-  borderLeftColor: COLORS.primary,
+  borderLeftColor: colors.primary,
 },
 telegramEmailText: {
   fontSize: 13,
   fontWeight: '600',
-  color: COLORS.textPrimary,
+  color: colors.textPrimary,
   fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
 },
 telegramRefreshButton: {
@@ -2621,36 +2621,36 @@ telegramRefreshButton: {
   gap: 8,
   padding: 14,
   borderRadius: 12,
-  backgroundColor: COLORS.primary,
+  backgroundColor: colors.primary,
   marginTop: 16,
 },
 telegramRefreshText: {
   fontSize: 15,
   fontWeight: '600',
-  color: COLORS.white,
+  color: colors.white,
 },
 telegramQRContainer: {
   alignItems: 'center',
   marginBottom: 24,
   padding: 20,
-  backgroundColor: COLORS.background,
+  backgroundColor: colors.background,
   borderRadius: 16,
 },
 telegramQRTitle: {
   fontSize: 16,
   fontWeight: '700',
-  color: COLORS.textPrimary,
+  color: colors.textPrimary,
   marginBottom: 16,
 },
 telegramQRCode: {
   padding: 12,
-  backgroundColor: COLORS.white,
+  backgroundColor: colors.white,
   borderRadius: 12,
   marginBottom: 12,
 },
 telegramQRSubtitle: {
   fontSize: 13,
-  color: COLORS.textSecondary,
+  color: colors.textSecondary,
 },
 telegramOpenButton: {
   flexDirection: 'row',
@@ -2665,10 +2665,10 @@ telegramOpenButton: {
 telegramOpenButtonText: {
   fontSize: 15,
   fontWeight: '700',
-  color: COLORS.white,
+  color: colors.white,
 },
 telegramSteps: {
-  backgroundColor: COLORS.background,
+  backgroundColor: colors.background,
   borderRadius: 12,
   padding: 16,
   marginBottom: 20,
@@ -2676,7 +2676,7 @@ telegramSteps: {
 telegramStepsTitle: {
   fontSize: 15,
   fontWeight: '700',
-  color: COLORS.textPrimary,
+  color: colors.textPrimary,
   marginBottom: 12,
 },
 telegramStep: {
@@ -2689,7 +2689,7 @@ telegramStepNumber: {
   width: 24,
   height: 24,
   borderRadius: 12,
-  backgroundColor: COLORS.primary,
+  backgroundColor: colors.primary,
   justifyContent: 'center',
   alignItems: 'center',
   flexShrink: 0,
@@ -2697,22 +2697,22 @@ telegramStepNumber: {
 telegramStepNumberText: {
   fontSize: 12,
   fontWeight: '700',
-  color: COLORS.white,
+  color: colors.white,
 },
 telegramStepText: {
   fontSize: 13,
-  color: COLORS.textSecondary,
+  color: colors.textSecondary,
   flex: 1,
   lineHeight: 18,
 },
 telegramCommand: {
   fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-  backgroundColor: COLORS.primary + '20',
+  backgroundColor: colors.primary + '20',
   paddingHorizontal: 4,
   paddingVertical: 2,
   borderRadius: 4,
   fontWeight: '600',
-  color: COLORS.primary,
+  color: colors.primary,
 },
 });
 
