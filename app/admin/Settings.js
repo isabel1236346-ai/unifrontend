@@ -9,14 +9,16 @@ import {
   SafeAreaView,
   ScrollView,
   Platform,
-  Switch
+  Switch,
+  StatusBar
 } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme } from '../../context/ThemeContext'; // Asegúrate que la ruta sea correcta
+
 const API_BASE_URL = 'https://unibackend-production.up.railway.app';
 const TOKEN_KEY = 'adminAuthToken'; 
 
@@ -51,34 +53,21 @@ const getTokenAsync = async () => {
 
 const deleteTokenAsync = async () => {
   if (Platform.OS === 'web') {
-    try {
-      localStorage.removeItem(TOKEN_KEY);
-      localStorage.removeItem('usuario');
-    } catch (e) { console.error("Error en web:", e); }
+    try { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem('usuario'); } catch (e) { console.error("Error en web:", e); }
   } else {
-    try {
-      await SecureStore.deleteItemAsync(TOKEN_KEY);
-      await AsyncStorage.removeItem('usuario');
-    } catch (e) { console.error("Error en nativo:", e); }
+    try { await SecureStore.deleteItemAsync(TOKEN_KEY); await AsyncStorage.removeItem('usuario'); } catch (e) { console.error("Error en nativo:", e); }
   }
 };
 
 const SettingsScreen = () => {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const { colorScheme, setTheme } = useTheme(); 
-  const [user, setUser] = useState({ 
-    id: null, 
-    nombre: '', 
-    apellidopat: '', 
-    apellidomat: '', 
-    email: '', 
-    role: '',
-    facultad: ''
-  });
+  const { colorScheme, setTheme: setGlobalTheme } = useTheme(); // ✅ Hook del tema
   
-  const [notificacionesActivas, setNotificacionesActivas] = useState(true);
-  const [modoOscuro, setModoOscuro] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [savingTheme, setSavingTheme] = useState(false);
+  const [user, setUser] = useState({ 
+    id: null, nombre: '', apellidopat: '', apellidomat: '', email: '', role: '', facultad: '', theme: 'light'
+  });
 
   useEffect(() => {
     loadUserData();
@@ -96,10 +85,12 @@ const SettingsScreen = () => {
         headers: { 'Authorization': `Bearer ${token}` },
       });
 
-      const rawData = response.data;
-      const userData = rawData.user || rawData; 
+      const userData = response.data.user || response.data; 
 
-      // ✅ Mapeo EXACTO basado en tu log de depuración
+      // ✅ 1. Aplicar el tema guardado en el backend al cargar la pantalla
+      const savedTheme = userData.theme || 'light';
+      setGlobalTheme(savedTheme);
+
       setUser({
         id: userData.id || null,
         nombre: userData.nombre || '',
@@ -107,7 +98,8 @@ const SettingsScreen = () => {
         apellidomat: userData.apellidomat || '',
         email: userData.email || 'sin-email@ejemplo.com',
         role: userData.role || 'admin',
-        facultad: userData.facultad || 'Sin facultad asignada'
+        facultad: userData.facultad || 'Sin facultad asignada',
+        theme: savedTheme
       });
       
     } catch (error) {
@@ -122,13 +114,40 @@ const SettingsScreen = () => {
     }
   };
 
+  // ✅ 2. Función para guardar el tema en el backend cuando el usuario cambia el switch
+  const handleThemeChange = async (newValue) => {
+    const newTheme = newValue ? 'dark' : 'light';
+    
+    // Cambiar visualmente de inmediato
+    setGlobalTheme(newTheme);
+    setUser(prev => ({ ...prev, theme: newTheme }));
+    
+    // Guardar en el backend
+    try {
+      setSavingTheme(true);
+      const token = await getTokenAsync();
+      await axios.put(
+        `${API_BASE_URL}/users/${user.id}`, 
+        { theme: newTheme }, 
+        { headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } }
+      );
+      console.log(`✅ Tema '${newTheme}' guardado en el backend`);
+    } catch (error) {
+      console.error("❌ Error al guardar el tema:", error);
+      Alert.alert('Error', 'No se pudo guardar tu preferencia de tema');
+      // Revertir visualmente si falló
+      setGlobalTheme(user.theme);
+    } finally {
+      setSavingTheme(false);
+    }
+  };
+
   const handleLogout = async () => {
     const performLogout = async () => {
       try {
         await deleteTokenAsync();
         router.replace('/LoginAdmin'); 
       } catch (error) {
-        console.error('Error al cerrar sesión:', error);
         router.replace('/LoginAdmin');
       }
     };
@@ -149,20 +168,21 @@ const SettingsScreen = () => {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: COLORS.background }]}>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>Cargando configuración...</Text>
+          <Text style={[styles.loadingText, { color: COLORS.textSecondary }]}>Cargando configuración...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  // ✅ Función auxiliar para mostrar el nombre completo
   const nombreCompleto = `${user.nombre} ${user.apellidopat} ${user.apellidomat}`.trim();
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: COLORS.background }]}>
+      <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={COLORS.primary} />
+      
       <Stack.Screen
         options={{
           title: 'Ajustes',
@@ -180,11 +200,9 @@ const SettingsScreen = () => {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.formContainer}>
           
-          {/* Sección: Mi Cuenta */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Mi Cuenta</Text>
             
-            {/* ✅ Ahora muestra el nombre completo concatenado */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Nombre Completo</Text>
               <View style={styles.inputContainer}>
@@ -201,7 +219,6 @@ const SettingsScreen = () => {
               </View>
             </View>
 
-            {/* ✅ Agregamos la Facultad que sí viene en tu backend */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Facultad</Text>
               <View style={styles.inputContainer}>
@@ -222,7 +239,6 @@ const SettingsScreen = () => {
 
             <TouchableOpacity
               onPress={() => {
-                console.log("🔵 Navegando con user.id:", user.id);
                 if (!user.id) {
                   Alert.alert('Error', 'No se pudo identificar tu ID de usuario.');
                   return;
@@ -237,7 +253,6 @@ const SettingsScreen = () => {
             </TouchableOpacity>
           </View>
 
-          {/* Sección: Preferencias */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Preferencias</Text>
             <View style={styles.switchRow}>
@@ -246,10 +261,10 @@ const SettingsScreen = () => {
                 <Text style={styles.hintText}>Recibir alertas de eventos y comité</Text>
               </View>
               <Switch
-                value={notificacionesActivas}
-                onValueChange={setNotificacionesActivas}
+                value={true} // Puedes conectarlo a un estado real si lo deseas
+                onValueChange={() => {}}
                 trackColor={{ false: COLORS.border, true: COLORS.primaryLight }}
-                thumbColor={notificacionesActivas ? COLORS.primary : COLORS.textTertiary}
+                thumbColor={COLORS.primary}
               />
             </View>
             <View style={styles.divider} />
@@ -258,19 +273,25 @@ const SettingsScreen = () => {
                 <Text style={styles.label}>Modo Oscuro</Text>
                 <Text style={styles.hintText}>Cambiar la apariencia de la aplicación</Text>
               </View>
+              
+              {/* ✅ 3. Switch conectado a la función que guarda en el backend */}
               <Switch
-                value={colorScheme === 'dark'} // Se enciende si el tema es oscuro
-                onValueChange={(value) => {
-                    // Si value es true, ponemos 'dark', si es false, ponemos 'light'
-                    setTheme(value ? 'dark' : 'light');
-                }}
-                trackColor={{ false: '#D1D5DB', true: '#FFEDD5' }} // Colores del riel
-                thumbColor={colorScheme === 'dark' ? '#E95A0C' : '#9CA3AF'} // Color de la bolita
-                />
+                value={user.theme === 'dark'}
+                onValueChange={handleThemeChange}
+                trackColor={{ false: COLORS.border, true: COLORS.primaryLight }}
+                thumbColor={user.theme === 'dark' ? COLORS.primary : COLORS.textTertiary}
+                disabled={savingTheme}
+              />
             </View>
+            
+            {savingTheme && (
+              <View style={styles.savingIndicator}>
+                <ActivityIndicator size="small" color={COLORS.primary} />
+                <Text style={styles.savingText}>Guardando preferencia...</Text>
+              </View>
+            )}
           </View>
 
-          {/* Sección: Integraciones */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Integraciones</Text>
             <TouchableOpacity style={styles.settingItem} onPress={handleTelegramPress} activeOpacity={0.7}>
@@ -285,7 +306,6 @@ const SettingsScreen = () => {
             </TouchableOpacity>
           </View>
 
-          {/* Sección: Soporte y Acerca de */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Soporte</Text>
             <TouchableOpacity style={styles.settingItem} onPress={() => Alert.alert('Soporte', 'Contacta a: sistemas@cidtec-uc.com')} activeOpacity={0.7}>
@@ -298,20 +318,8 @@ const SettingsScreen = () => {
               </View>
               <Ionicons name="chevron-forward" size={20} color={COLORS.textTertiary} />
             </TouchableOpacity>
-            <View style={styles.divider} />
-            <TouchableOpacity style={styles.settingItem} onPress={() => Alert.alert('Acerca de', 'Sistema de Gestión de Eventos Universitarios\nVersión 1.2.0')} activeOpacity={0.7}>
-              <View style={[styles.iconBox, { backgroundColor: COLORS.secondary + '20' }]}>
-                <Ionicons name="information-circle-outline" size={20} color={COLORS.secondary} />
-              </View>
-              <View style={styles.itemContent}>
-                <Text style={styles.itemTitle}>Acerca de</Text>
-                <Text style={styles.itemSubtitle}>Versión 1.2.0</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={COLORS.textTertiary} />
-            </TouchableOpacity>
           </View>
 
-          {/* Botón de Cierre de Sesión */}
           <View style={styles.actions}>
             <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.8}>
               <Ionicons name="log-out-outline" size={20} color={COLORS.white} />
@@ -327,10 +335,10 @@ const SettingsScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  container: { flex: 1 },
   scrollView: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { marginTop: 10, fontSize: 16, color: COLORS.textSecondary },
+  loadingText: { marginTop: 10, fontSize: 16 },
   formContainer: { padding: 20, paddingBottom: 40 },
   section: {
     backgroundColor: COLORS.surface,
@@ -397,6 +405,18 @@ const styles = StyleSheet.create({
   },
   logoutButtonText: { fontSize: 16, fontWeight: '600', color: COLORS.white },
   versionText: { textAlign: 'center', fontSize: 12, color: COLORS.textTertiary, marginTop: 20 },
+  savingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+    gap: 8,
+  },
+  savingText: {
+    fontSize: 12,
+    color: COLORS.textTertiary,
+    fontStyle: 'italic',
+  },
 });
 
 export default SettingsScreen;
