@@ -98,6 +98,7 @@ const MIN_CARD_WIDTH_ACTIONS = 200;
 const MAX_COLUMNS_ACTIONS = 3;
 
 const DashboardCard = ({ title, value, icon, color, trend, description, colors }) => {
+  const styles = createStyles(colors);
   const trendColor = trend > 0 ? colors.success : colors.accent;
   
   return (
@@ -131,7 +132,7 @@ const DashboardCard = ({ title, value, icon, color, trend, description, colors }
 const ActionCard = ({ action, onPress, cardWidth, index, colors }) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
-
+  const styles = createStyles(colors);
   useEffect(() => {
     Animated.timing(fadeAnim, {
       toValue: 1,
@@ -210,7 +211,7 @@ const MinimalBottomDock = ({ onLogout, onActionPress, isExpanded, onToggleExpand
   const { width: windowWidth } = useWindowDimensions();
   const dockHeight = useRef(new Animated.Value(60)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
-
+const styles = createStyles(colors);
   useEffect(() => {
     Animated.parallel([
       Animated.timing(dockHeight, {
@@ -304,6 +305,7 @@ const MinimalBottomDock = ({ onLogout, onActionPress, isExpanded, onToggleExpand
 };
 
 const MinimalHeader = ({ nombreUsuario, facultad, unreadCount, onNotificationPress, onTelegramPress, isTelegramLinked, colors }) => {
+  const styles = createStyles(colors);
   const getCurrentGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Buenos días';
@@ -346,7 +348,10 @@ const MinimalHeader = ({ nombreUsuario, facultad, unreadCount, onNotificationPre
     </View>
   );
 };
-const NotificationBell = ({ notificationCount, onPress, colors }) => (
+const NotificationBell = ({ notificationCount, onPress, colors }) => 
+  {
+  const styles = createStyles(colors);
+  return (
   <TouchableOpacity onPress={onPress} style={styles.notificationBell}>
     <Ionicons name="notifications-outline" size={24} color={colors.textPrimary} />
     {notificationCount > 0 && (
@@ -358,12 +363,15 @@ const NotificationBell = ({ notificationCount, onPress, colors }) => (
     )}
   </TouchableOpacity>
 );
-const NotificationsModal = ({ visible, onClose, notifications, markAsRead, markAllAsRead, onNotificationPress, colors }) => (
-  <Modal
-    visible={visible}
-    transparent={true}
-    animationType="slide"
-    onRequestClose={onClose}
+  };
+const NotificationsModal = ({ visible, onClose, notifications, markAsRead, markAllAsRead, onNotificationPress, colors }) => {
+  const styles = createStyles(colors);
+  return (
+    <Modal
+      visible={visible}
+      transparent={true}
+      animationType="slide"
+      onRequestClose={onClose}
   >
     <View style={styles.notificationsModalOverlay}>
       <View style={[styles.notificationsModalContent, { backgroundColor: colors.surface }]}>
@@ -438,6 +446,7 @@ const NotificationsModal = ({ visible, onClose, notifications, markAsRead, markA
     </View>
   </Modal>
 );
+};
 
 const getNotificationIcon = (type) => {
   switch (type) {
@@ -459,6 +468,7 @@ const HomeAcademicoScreen = () => {
   const router = useRouter();
   const { width: windowWidth } = useWindowDimensions();
   const {colors, colorScheme} = useTheme();
+  const styles =createStyles(colors);
 
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
