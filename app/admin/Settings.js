@@ -67,15 +67,15 @@ const SettingsScreen = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   
-  // ✅ 1. Estado inicial con TODOS los campos posibles
+  // ✅ Estado inicial con todos los campos que devuelve tu backend
   const [user, setUser] = useState({ 
     id: null, 
-    username: '', 
     nombre: '', 
     apellidopat: '', 
     apellidomat: '', 
     email: '', 
-    role: '' 
+    role: '',
+    facultad: ''
   });
   
   const [notificacionesActivas, setNotificacionesActivas] = useState(true);
@@ -97,24 +97,18 @@ const SettingsScreen = () => {
         headers: { 'Authorization': `Bearer ${token}` },
       });
 
-      // ✅ 2. Depuración extrema: Ver exactamente qué devuelve el backend
-      console.log("🔍 DEBUG RAW RESPONSE:", JSON.stringify(response.data, null, 2));
-      
       const rawData = response.data;
-      // Manejar si el backend envía { user: {...} } o directamente {...}
       const userData = rawData.user || rawData; 
 
-      console.log("🔍 DEBUG USER DATA PROCESSED:", JSON.stringify(userData, null, 2));
-
-      // ✅ 3. Mapeo robusto con múltiples posibles nombres de campos del backend
+      // ✅ Mapeo EXACTO basado en tu log de depuración
       setUser({
-        id: userData.idusuario || userData.id || userData.id_usuario || null,
-        username: userData.username || userData.correo || userData.user || '',
-        nombre: userData.nombre || userData.nombres || '',
-        apellidopat: userData.apellidopat || userData.apellido_paterno || userData.apellidoPat || '',
-        apellidomat: userData.apellidomat || userData.apellido_materno || userData.apellidoMat || '',
-        email: userData.email || userData.correo || 'sin-email@ejemplo.com',
-        role: userData.role || userData.rol || 'admin',
+        id: userData.id || null,
+        nombre: userData.nombre || '',
+        apellidopat: userData.apellidopat || '',
+        apellidomat: userData.apellidomat || '',
+        email: userData.email || 'sin-email@ejemplo.com',
+        role: userData.role || 'admin',
+        facultad: userData.facultad || 'Sin facultad asignada'
       });
       
     } catch (error) {
@@ -123,7 +117,7 @@ const SettingsScreen = () => {
         Alert.alert('Sesión Expirada', 'Tu sesión ha expirado.', [{ text: 'OK', onPress: () => router.replace('/LoginAdmin') }]);
         return;
       }
-      Alert.alert('Error', 'No se pudo cargar la información del perfil. Revisa la consola.');
+      Alert.alert('Error', 'No se pudo cargar la información del perfil.');
     } finally {
       setLoading(false);
     }
@@ -165,6 +159,9 @@ const SettingsScreen = () => {
     );
   }
 
+  // ✅ Función auxiliar para mostrar el nombre completo
+  const nombreCompleto = `${user.nombre} ${user.apellidopat} ${user.apellidomat}`.trim();
+
   return (
     <SafeAreaView style={styles.container}>
       <Stack.Screen
@@ -188,36 +185,12 @@ const SettingsScreen = () => {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Mi Cuenta</Text>
             
+            {/* ✅ Ahora muestra el nombre completo concatenado */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Nombre de Usuario</Text>
+              <Text style={styles.label}>Nombre Completo</Text>
               <View style={styles.inputContainer}>
                 <Ionicons name="person-outline" size={20} color={COLORS.textSecondary} />
-                <Text style={styles.inputText}>{user.username || 'No especificado'}</Text>
-              </View>
-            </View>
-
-            {/* ✅ 4. Mostrar los campos por separado para verificar que cargan */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Nombre</Text>
-              <View style={styles.inputContainer}>
-                <Ionicons name="text-outline" size={20} color={COLORS.textSecondary} />
-                <Text style={styles.inputText}>{user.nombre || 'No especificado'}</Text>
-              </View>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Apellido Paterno</Text>
-              <View style={styles.inputContainer}>
-                <Ionicons name="text-outline" size={20} color={COLORS.textSecondary} />
-                <Text style={styles.inputText}>{user.apellidopat || 'No especificado'}</Text>
-              </View>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Apellido Materno</Text>
-              <View style={styles.inputContainer}>
-                <Ionicons name="text-outline" size={20} color={COLORS.textSecondary} />
-                <Text style={styles.inputText}>{user.apellidomat || 'No especificado'}</Text>
+                <Text style={styles.inputText}>{nombreCompleto || 'No especificado'}</Text>
               </View>
             </View>
 
@@ -226,6 +199,15 @@ const SettingsScreen = () => {
               <View style={styles.inputContainer}>
                 <Ionicons name="mail-outline" size={20} color={COLORS.textSecondary} />
                 <Text style={styles.inputText}>{user.email}</Text>
+              </View>
+            </View>
+
+            {/* ✅ Agregamos la Facultad que sí viene en tu backend */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Facultad</Text>
+              <View style={styles.inputContainer}>
+                <Ionicons name="business-outline" size={20} color={COLORS.textSecondary} />
+                <Text style={styles.inputText}>{user.facultad}</Text>
               </View>
             </View>
 
@@ -242,8 +224,6 @@ const SettingsScreen = () => {
             <TouchableOpacity
               onPress={() => {
                 console.log("🔵 Navegando con user.id:", user.id);
-                console.log("🔵 Estado completo de user:", JSON.stringify(user, null, 2));
-                
                 if (!user.id) {
                   Alert.alert('Error', 'No se pudo identificar tu ID de usuario.');
                   return;
