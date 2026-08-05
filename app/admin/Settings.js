@@ -43,9 +43,19 @@ const COLORS = {
 
 const getTokenAsync = async () => {
   if (Platform.OS === 'web') {
-    try { return localStorage.getItem(TOKEN_KEY); } catch (e) { return null; }
+    try {
+      return localStorage.getItem(TOKEN_KEY);
+    } catch (e) {
+      console.error("Error al acceder a localStorage en web:", e);
+      return null;
+    }
   } else {
-    try { return await SecureStore.getItemAsync(TOKEN_KEY); } catch (e) { return null; }
+    try {
+      return await SecureStore.getItemAsync(TOKEN_KEY);
+    } catch (e) {
+      console.error("Error al obtener token de SecureStore en nativo:", e);
+      return null;
+    }
   }
 };
 
@@ -66,7 +76,6 @@ const deleteTokenAsync = async () => {
 const SettingsScreen = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  // ✅ Agregamos 'id' al estado para poder usarlo en la navegación
   const [user, setUser] = useState({ id: null, nombre: '', email: '', role: '' });
   
   const [notificacionesActivas, setNotificacionesActivas] = useState(true);
@@ -79,23 +88,51 @@ const SettingsScreen = () => {
   const loadUserData = async () => {
     try {
       const token = await getTokenAsync();
+      console.log("⚙️ Settings: Token obtenido:", token ? `${token.substring(0, 20)}...` : 'NULL');
+
       if (!token) {
-        router.replace('/'); 
+        Alert.alert(
+          'Autenticación Requerida',
+          'No se encontró el token. Por favor, inicia sesión de nuevo.',
+          [{ text: 'OK', onPress: () => router.replace('/LoginAdmin') }]
+        );
         return;
       }
 
+      console.log("⚙️ Settings: Solicitando perfil a la API...");
       const response = await axios.get(`${API_BASE_URL}/profile`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
 
+      console.log("✅ Settings: Datos del perfil recibidos:", response.data);
+      const userData = response.data;
+
+      // ✅ Manejo flexible de nombres de campos (igual que en UsuarioA)
       setUser({
-        id: response.data.id || response.data.idusuario || null, // ✅ Capturamos el ID
-        nombre: `${response.data.nombre || ''} ${response.data.apellidopat || ''}`.trim() || 'Usuario',
-        email: response.data.email || 'sin-email@ejemplo.com',
-        role: response.data.role || 'admin',
+        id: userData.idusuario || userData.id || null,
+        nombre: `${userData.nombre || userData.username || ''} ${userData.apellidopat || ''}`.trim() || 'Usuario',
+        email: userData.email || 'sin-email@ejemplo.com',
+        role: userData.role || 'admin',
       });
     } catch (error) {
-      console.error('Error al cargar perfil en settings:', error);
+      console.error("❌ Settings: Error al cargar perfil:", error);
+      if (error.response) {
+        console.error("❌ Settings: Status:", error.response.status);
+        console.error("❌ Settings: Data:", error.response.data);
+        
+        if (error.response.status === 401) {
+          Alert.alert(
+            'Sesión Expirada',
+            'Tu sesión ha expirado. Por favor inicia sesión nuevamente.',
+            [{ text: 'OK', onPress: () => router.replace('/LoginAdmin') }]
+          );
+          return;
+        }
+      } else if (error.request) {
+        console.error("❌ Settings: No hubo respuesta del servidor:", error.request);
+      }
+      
+      Alert.alert('Error', 'No se pudo cargar la información del perfil. Revisa la consola para más detalles.');
     } finally {
       setLoading(false);
     }
@@ -105,10 +142,10 @@ const SettingsScreen = () => {
     const performLogout = async () => {
       try {
         await deleteTokenAsync();
-        router.replace('/'); 
+        router.replace('/LoginAdmin'); 
       } catch (error) {
         console.error('Error al cerrar sesión:', error);
-        router.replace('/');
+        router.replace('/LoginAdmin');
       }
     };
 
@@ -155,6 +192,15 @@ const SettingsScreen = () => {
           headerStyle: { backgroundColor: COLORS.primary },
           headerTintColor: '#fff',
           headerTitleStyle: { fontWeight: 'bold' },
+          headerLeft: () => (
+            <TouchableOpacity 
+              onPress={() => router.back()} 
+              style={{ marginLeft: 15, padding: 5 }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="arrow-back" size={24} color="#fff" />
+            </TouchableOpacity>
+          ),
         }}
       />
 
@@ -166,7 +212,7 @@ const SettingsScreen = () => {
             <Text style={styles.sectionTitle}>Mi Cuenta</Text>
             
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Nombre Completo</Text>
+              <Text style={styles.label}>Nombre de Usuario</Text>
               <View style={styles.inputContainer}>
                 <Ionicons name="person-outline" size={20} color={COLORS.textSecondary} />
                 <Text style={styles.inputText}>{user.nombre}</Text>
@@ -191,7 +237,6 @@ const SettingsScreen = () => {
               </View>
             </View>
 
-            {/* ✅ Botón corregido para editar el propio perfil */}
             <TouchableOpacity
               onPress={() => {
                 if (!user.id) {
@@ -308,27 +353,11 @@ const SettingsScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: COLORS.textSecondary,
-  },
-  formContainer: {
-    padding: 20,
-    paddingBottom: 40,
-  },
+  container: { flex: 1, backgroundColor: COLORS.background },
+  scrollView: { flex: 1 },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingText: { marginTop: 10, fontSize: 16, color: COLORS.textSecondary },
+  formContainer: { padding: 20, paddingBottom: 40 },
   section: {
     backgroundColor: COLORS.surface,
     borderRadius: 12,
@@ -349,15 +378,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
     borderBottomColor: COLORS.primaryLight,
   },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.textPrimary,
-    marginBottom: 8,
-  },
+  inputGroup: { marginBottom: 20 },
+  label: { fontSize: 14, fontWeight: '600', color: COLORS.textPrimary, marginBottom: 8 },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -368,61 +390,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     height: 50,
   },
-  inputText: {
-    flex: 1,
-    fontSize: 16,
-    color: COLORS.textPrimary,
-    marginLeft: 10,
-  },
-  hintText: {
-    fontSize: 12,
-    color: COLORS.textTertiary,
-    marginTop: 2,
-  },
-  switchRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 10,
-  },
-  switchLabel: {
-    flex: 1,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: COLORS.border,
-    marginVertical: 15,
-  },
-  settingItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-  },
-  iconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 15,
-  },
-  itemContent: {
-    flex: 1,
-  },
-  itemTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: COLORS.textPrimary,
-    marginBottom: 2,
-  },
-  itemSubtitle: {
-    fontSize: 12,
-    color: COLORS.textTertiary,
-  },
-  actions: {
-    marginTop: 10,
-  },
-  // ✅ Estilos nuevos para el botón de editar perfil
+  inputText: { flex: 1, fontSize: 16, color: COLORS.textPrimary, marginLeft: 10 },
+  hintText: { fontSize: 12, color: COLORS.textTertiary, marginTop: 2 },
+  switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10 },
+  switchLabel: { flex: 1 },
+  divider: { height: 1, backgroundColor: COLORS.border, marginVertical: 15 },
+  settingItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
+  iconBox: { width: 40, height: 40, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
+  itemContent: { flex: 1 },
+  itemTitle: { fontSize: 15, fontWeight: '600', color: COLORS.textPrimary, marginBottom: 2 },
+  itemSubtitle: { fontSize: 12, color: COLORS.textTertiary },
+  actions: { marginTop: 10 },
   editProfileButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -433,11 +411,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     gap: 8,
   },
-  editProfileButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: COLORS.white,
-  },
+  editProfileButtonText: { fontSize: 15, fontWeight: '600', color: COLORS.white },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -447,17 +421,8 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     gap: 8,
   },
-  logoutButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.white,
-  },
-  versionText: {
-    textAlign: 'center',
-    fontSize: 12,
-    color: COLORS.textTertiary,
-    marginTop: 20,
-  },
+  logoutButtonText: { fontSize: 16, fontWeight: '600', color: COLORS.white },
+  versionText: { textAlign: 'center', fontSize: 12, color: COLORS.textTertiary, marginTop: 20 },
 });
 
 export default SettingsScreen;
