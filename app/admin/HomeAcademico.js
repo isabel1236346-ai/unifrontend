@@ -22,6 +22,7 @@ import { BarChart } from 'react-native-chart-kit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ChatEmbed from '../../components/ChatEmbed';
 import QRCode from 'react-qr-code';
+import {useTheme} from '../../context/ThemeContext';
 // Configuración de API
 let determinedApiBaseUrl;
 /*if (Platform.OS === 'android') {
@@ -96,21 +97,20 @@ const MAX_COLUMNS_DASHBOARD = 4;
 const MIN_CARD_WIDTH_ACTIONS = 200;
 const MAX_COLUMNS_ACTIONS = 3;
 
-const DashboardCard = ({ title, value, icon, color, trend, description }) => {
-  const trendColor = trend > 0 ? COLORS.success : COLORS.accent;
+const DashboardCard = ({ title, value, icon, color, trend, description, colors }) => {
+  const trendColor = trend > 0 ? colors.success : colors.accent;
   
   return (
-    <View style={[styles.dashboardCard, { backgroundColor: `${color}08` }]}>
+    <View style={[styles.dashboardCard, { backgroundColor: `${color}08`, borderColor: colors.border }]}>
       <View style={styles.cardHeader}>
-        {/* Contenedor del icono circular como en la imagen */}
         <View style={[styles.iconContainer, { backgroundColor: color }]}>
-          <Ionicons name={icon} size={22} color={COLORS.white} />
+          <Ionicons name={icon} size={22} color={colors.white} />
         </View>
-        <Text style={styles.cardValue}>{value}</Text>
+        <Text style={[styles.cardValue, { color: colors.textPrimary }]}>{value}</Text>
       </View>
       
       <View>
-        <Text style={styles.cardTitle}>{title}</Text>
+        <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>{title}</Text>
         
         {trend !== undefined && trend !== null ? (
           <View style={styles.cardTrend}>
@@ -121,14 +121,14 @@ const DashboardCard = ({ title, value, icon, color, trend, description }) => {
         ) : null}
         
         {description && (
-          <Text style={styles.cardDescription}>{description}</Text>
+          <Text style={[styles.cardDescription, { color: colors.textTertiary }]}>{description}</Text>
         )}
       </View>
     </View>
   );
 };
 
-const ActionCard = ({ action, onPress, cardWidth, index }) => {
+const ActionCard = ({ action, onPress, cardWidth, index, colors }) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -174,6 +174,8 @@ const ActionCard = ({ action, onPress, cardWidth, index }) => {
           {
             transform: [{ scale: scaleAnim }],
             opacity: fadeAnim,
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
           },
         ]}
       >
@@ -182,11 +184,11 @@ const ActionCard = ({ action, onPress, cardWidth, index }) => {
         </View>
         <View style={styles.actionCardContentMinimal}>
           <View style={styles.actionCardTitleContainerMinimal}>
-            <Text style={styles.actionCardTitleMinimal} numberOfLines={1}>
+            <Text style={[styles.actionCardTitleMinimal,{color: colors.textPrimary}]} numberOfLines={1}>
               {action.title}
             </Text>
             {action.badge && (
-              <View style={[styles.actionCardBadgeMinimal, { backgroundColor: action.badgeColor || COLORS.primary }]}>
+              <View style={[styles.actionCardBadgeMinimal, { backgroundColor: action.badgeColor || colors.primary }]}>
                 <Text style={styles.actionCardBadgeTextMinimal} numberOfLines={1}>
                   {action.badge}
                 </Text>
@@ -194,7 +196,7 @@ const ActionCard = ({ action, onPress, cardWidth, index }) => {
             )}
           </View>
           {action.description && (
-            <Text style={styles.actionCardDescriptionMinimal} numberOfLines={2}>
+            <Text style={[styles.actionCardDescriptionMinimal, { color: colors.textSecondary }]} numberOfLines={2}>
               {action.description}
             </Text>
           )}
@@ -204,7 +206,7 @@ const ActionCard = ({ action, onPress, cardWidth, index }) => {
   );
 };
 
-const MinimalBottomDock = ({ onLogout, onActionPress, isExpanded, onToggleExpanded }) => {
+const MinimalBottomDock = ({ onLogout, onActionPress, isExpanded, onToggleExpanded, colors }) => {
   const { width: windowWidth } = useWindowDimensions();
   const dockHeight = useRef(new Animated.Value(60)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
@@ -265,16 +267,16 @@ const MinimalBottomDock = ({ onLogout, onActionPress, isExpanded, onToggleExpand
   ];
 
   return (
-    <Animated.View style={[styles.minimalDockContainer, { height: dockHeight }]}>
+    <Animated.View style={[styles.minimalDockContainer, { height: dockHeight, backgroundColor: colors.primary, borderColor: colors.border }]}>
       <TouchableOpacity onPress={onToggleExpanded} style={styles.minimalDockToggle}>
         <Animated.View style={{ transform: [{ rotate: rotateInterpolate }] }}>
           <Ionicons name="chevron-up-outline" size={20} color={COLORS.white} />
         </Animated.View>
-        <Text style={styles.minimalDockToggleText}>Menú</Text>
+        <Text style={[styles.minimalDockToggleText, { color: COLORS.white }]}>Menú</Text>
       </TouchableOpacity>
 
       {isExpanded && (
-        <View style={styles.minimalDockExpandedContent}>
+        <View style={[styles.minimalDockExpandedContent, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <View style={styles.minimalDockQuickActions}>
             {quickActions.map((action) => (
               <TouchableOpacity
@@ -289,9 +291,11 @@ const MinimalBottomDock = ({ onLogout, onActionPress, isExpanded, onToggleExpand
               </TouchableOpacity>
             ))}
           </View>
-          <TouchableOpacity onPress={onLogout} style={styles.minimalDockLogoutButton}>
-            <Ionicons name="log-out-outline" size={20} color={COLORS.white} />
-            <Text style={styles.minimalDockLogoutButtonText}>Cerrar Sesión</Text>
+          <TouchableOpacity onPress={onLogout} style={[styles.minimalDockLogoutButton, { backgroundColor: colors.primary, borderColor: colors.border }]}>
+            <Ionicons name="log-out-outline" size={20} color={colors.white} />
+            <Text style={[styles.minimalDockLogoutButtonText, { color: colors.white }]}>
+              Cerrar Sesión
+            </Text>
           </TouchableOpacity>
         </View>
       )}
@@ -299,7 +303,7 @@ const MinimalBottomDock = ({ onLogout, onActionPress, isExpanded, onToggleExpand
   );
 };
 
-const MinimalHeader = ({ nombreUsuario, facultad, unreadCount, onNotificationPress, onTelegramPress, isTelegramLinked }) => {
+const MinimalHeader = ({ nombreUsuario, facultad, unreadCount, onNotificationPress, onTelegramPress, isTelegramLinked, colors }) => {
   const getCurrentGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Buenos días';
@@ -308,41 +312,43 @@ const MinimalHeader = ({ nombreUsuario, facultad, unreadCount, onNotificationPre
   };
 
   return (
-    <View style={styles.minimalHeaderContainer}>
-     <View style={styles.minimalHeaderTop}>
-      <View style={styles.minimalHeaderGreeting}>
-        <Text style={styles.minimalGreetingText}>{getCurrentGreeting()},</Text>
-        <Text style={styles.minimalUserNameText}>{nombreUsuario}</Text>
-      </View>
+    <View style={[styles.minimalHeaderContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <View style={styles.minimalHeaderTop}>
+        <View style={styles.minimalHeaderGreeting}>
+          <Text style={[styles.minimalGreetingText, { color: colors.textSecondary }]}>
+            {getCurrentGreeting()},
+          </Text>
+          <Text style={[styles.minimalUserNameText, { color: colors.textPrimary }]}>{nombreUsuario}</Text>
+        </View>
         <View style={{ flexDirection: 'row', gap: 8 }}>
-          {/* Botón de Telegram */}
           <TouchableOpacity onPress={onTelegramPress} style={styles.telegramBell}>
             <Ionicons 
               name="send" 
               size={24} 
-              color={isTelegramLinked ? '#0088cc' : COLORS.textTertiary} 
+              color={isTelegramLinked ? '#0088cc' : colors.textTertiary} 
             />
             {isTelegramLinked && (
               <View style={styles.telegramLinkedDot} />
             )}
           </TouchableOpacity>
-        <NotificationBell 
-          notificationCount={unreadCount} 
-          onPress={onNotificationPress} 
-        />
+          <NotificationBell 
+            notificationCount={unreadCount} 
+            onPress={onNotificationPress}
+            colors={colors}
+          />
+        </View>
       </View>
-      </View>
-      <Text style={styles.minimalUserFacultyText}>
+      <Text style={[styles.minimalUserFacultyText, { color: colors.textSecondary }]}>
         {facultad || 'Sin facultad asignada'} 
       </Text>
       
-      <Text style={styles.minimalHeaderTitle}>Panel de Usuario Académico</Text>
+      <Text style={[styles.minimalHeaderTitle, { color: colors.textPrimary }]}>Panel de Usuario Académico</Text>
     </View>
   );
 };
-const NotificationBell = ({ notificationCount, onPress }) => (
+const NotificationBell = ({ notificationCount, onPress, colors }) => (
   <TouchableOpacity onPress={onPress} style={styles.notificationBell}>
-    <Ionicons name="notifications-outline" size={24} color={COLORS.textPrimary} />
+    <Ionicons name="notifications-outline" size={24} color={colors.textPrimary} />
     {notificationCount > 0 && (
       <View style={styles.notificationBadge}>
         <Text style={styles.notificationBadgeText}>
@@ -352,7 +358,7 @@ const NotificationBell = ({ notificationCount, onPress }) => (
     )}
   </TouchableOpacity>
 );
-const NotificationsModal = ({ visible, onClose, notifications, markAsRead, markAllAsRead, onNotificationPress }) => (
+const NotificationsModal = ({ visible, onClose, notifications, markAsRead, markAllAsRead, onNotificationPress, colors }) => (
   <Modal
     visible={visible}
     transparent={true}
@@ -360,19 +366,19 @@ const NotificationsModal = ({ visible, onClose, notifications, markAsRead, markA
     onRequestClose={onClose}
   >
     <View style={styles.notificationsModalOverlay}>
-      <View style={styles.notificationsModalContent}>
-        <View style={styles.notificationsModalHeader}>
-          <Text style={styles.notificationsModalTitle}>Notificaciones</Text>
+      <View style={[styles.notificationsModalContent, { backgroundColor: colors.surface }]}>
+        <View style={[styles.notificationsModalHeader, { borderBottomColor: colors.border }]}>
+          <Text style={[styles.notificationsModalTitle, { color: colors.textPrimary }]}>Notificaciones</Text>
           <TouchableOpacity onPress={onClose} style={{ padding: 6 }}>  
-            <Ionicons name="close" size={24} color={COLORS.textSecondary} />
+            <Ionicons name="close" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
         
         <ScrollView style={styles.notificationsList}>
           {notifications.length === 0 ? (
             <View style={styles.emptyNotifications}>
-              <Ionicons name="notifications-off-outline" size={48} color={COLORS.textTertiary} />
-              <Text style={styles.emptyNotificationsText}>No hay notificaciones nuevas</Text>
+              <Ionicons name="notifications-off-outline" size={48} color={colors.textTertiary} />
+              <Text style={[styles.emptyNotificationsText, { color: colors.textTertiary }]}>No hay notificaciones nuevas</Text>
             </View>
           ) : (
             notifications.map((notification) => (
@@ -380,7 +386,8 @@ const NotificationsModal = ({ visible, onClose, notifications, markAsRead, markA
                 key={notification.idnotification || notification.id}
                 style={[
                   styles.notificationItem,
-                  !notification.read && styles.notificationItemUnread
+                  !notification.read && styles.notificationItemUnread,
+                  { borderBottomColor: colors.divider }
                 ]}
                 onPress={() => {
                   markAsRead(notification.idnotification || notification.id);
@@ -392,18 +399,18 @@ const NotificationsModal = ({ visible, onClose, notifications, markAsRead, markA
                   <Ionicons
                     name={getNotificationIcon(notification.tipo)}
                     size={20}
-                    color={COLORS.primary}
+                    color={colors.primary}
                   />
                   {!notification.read && <View style={styles.unreadDot} />}
                 </View>
                 <View style={styles.notificationContent}>
-                  <Text style={[styles.notificationTitle, !notification.read && styles.notificationTitleUnread]}>
+                  <Text style={[styles.notificationTitle, !notification.read && styles.notificationTitleUnread, { color: colors.textPrimary }]}>
                     {notification.titulo || notification.title}
                   </Text>
-                  <Text style={styles.notificationMessage} numberOfLines={2}>
+                  <Text style={[styles.notificationMessage, { color: colors.textSecondary }]} numberOfLines={2}>
                     {notification.mensaje || notification.message}
                   </Text>
-                  <Text style={styles.notificationTime}>
+                  <Text style={[styles.notificationTime, { color: colors.textTertiary }]}>
                     {notification.created_at 
                       ? new Date(notification.created_at).toLocaleDateString('es-ES', { 
                           day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' 
@@ -418,13 +425,13 @@ const NotificationsModal = ({ visible, onClose, notifications, markAsRead, markA
         
         {notifications.some(n => !n.read) && (
           <TouchableOpacity 
-            style={styles.markAllReadButton} 
+            style={[styles.markAllReadButton, { borderTopColor: colors.border }]} 
             onPress={() => {
               markAllAsRead();
             }}
           >
-            <Ionicons name="checkmark-done" size={18} color={COLORS.primary} />
-            <Text style={styles.markAllReadText}>Marcar todas como leídas</Text>
+            <Ionicons name="checkmark-done" size={18} color={colors.primary} />
+            <Text style={[styles.markAllReadText, { color: colors.primary }]}>Marcar todas como leídas</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -451,6 +458,7 @@ const HomeAcademicoScreen = () => {
   const nombreUsuario = params.nombre || 'Administrador';
   const router = useRouter();
   const { width: windowWidth } = useWindowDimensions();
+  const {colors, colorScheme} = useTheme();
 
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -897,7 +905,7 @@ useEffect(() => {
   return () => {
     clearInterval(notificationInterval);
   };
-}, []); // ✅ CAMBIAR A ARRAY VACÍO: Solo se ejecuta UNA vez al montar la pantalla
+}, []); 
   const { columns: dashboardColumns, cardWidth: dashboardCardWidth } = useMemo(() => {
     let numColumns = Math.floor(windowWidth / (MIN_CARD_WIDTH_DASHBOARD + CARD_MARGIN));
     numColumns = Math.min(numColumns, MAX_COLUMNS_DASHBOARD);
@@ -1090,8 +1098,10 @@ const handleActionPress = (action) => {
 };
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar 
+      barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'}
+      backgroundColor="transparent" translucent />
       
       <ScrollView
         style={styles.scrollView}
@@ -1108,24 +1118,25 @@ const handleActionPress = (action) => {
           onNotificationPress={() => setShowNotifications(true)}
           onTelegramPress={() => setShowTelegramModal(true)}
           isTelegramLinked={isTelegramLinked}
+          colors={colors}
         />
         
 <View style={styles.dashboardSectionMinimal}>
   <View style={styles.sectionHeaderMinimal}>
-    <Text style={styles.sectionTitleMinimal}>Resumen de Actividad</Text>
-    <Text style={styles.sectionSubtitleMinimal}>Métricas clave del sistema</Text>
+    <Text style={[styles.sectionTitleMinimal, { color: colors.textPrimary }]}>Resumen de Actividad</Text>
+    <Text style={[styles.sectionSubtitleMinimal, { color: colors.textSecondary }]}>Métricas clave del sistema</Text>
   </View>
 
   {loadingDashboard ? (
     <View style={styles.loadingContainer}>
-      <ActivityIndicator size="large" color={COLORS.primary} />
-      <Text style={styles.loadingText}>Cargando estadísticas...</Text>
+      <ActivityIndicator size="large" color={colors.primary} />
+      <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Cargando estadísticas...</Text>
     </View>
   ) : (
     <View style={styles.dashboardGridMinimal}>
       {dashboardStats.map((stat, index) => (
         <View key={index} style={{ width: dashboardCardWidth }}>
-          <DashboardCard {...stat} />
+          <DashboardCard {...stat} colors={colors} />
         </View>
       ))}
     </View>
@@ -1133,7 +1144,7 @@ const handleActionPress = (action) => {
 
 {historicalData.length > 0 && (
   <View style={styles.chartContainer}>
-    <Text style={styles.chartTitle}>Eventos por Mes (últimos 6 meses)</Text>
+    <Text style={[styles.chartTitle, { color: colors.textPrimary }]}>Eventos por Mes (últimos 6 meses)</Text>
     <BarChart
       data={{
         labels: historicalData.map(d => d.name || ''),
@@ -1144,9 +1155,9 @@ const handleActionPress = (action) => {
       width={windowWidth - 40}
       height={220}
       chartConfig={{
-        backgroundColor: COLORS.surface,
-        backgroundGradientFrom: COLORS.surface,
-        backgroundGradientTo: COLORS.surface,
+        backgroundColor: colors.surface,
+        backgroundGradientFrom: colors.surface,
+        backgroundGradientTo: colors.surface,
         color: (opacity = 1) => `rgba(233, 90, 12, ${opacity})`,
         labelColor: (opacity = 1) => `rgba(31, 41, 55, ${opacity})`,
         style: { borderRadius: 16 },
@@ -1163,8 +1174,8 @@ const handleActionPress = (action) => {
 </View>
 <View style={styles.committeeSection}>
   <View style={styles.sectionHeaderMinimal}>
-    <Text style={styles.sectionTitleMinimal}>Mis Eventos como Comité</Text>
-    <Text style={styles.sectionSubtitleMinimal}>
+    <Text style={[styles.sectionTitleMinimal, { color: colors.textPrimary }]}>Mis Eventos como Comité</Text>
+    <Text style={[styles.sectionSubtitleMinimal, { color: colors.textSecondary }]}>
       Eventos en los que participas como miembro del comité
     </Text>
   </View>
@@ -1282,13 +1293,13 @@ const handleActionPress = (action) => {
 
   {loadingComitee ? (
     <View style={styles.loadingContainer}>
-      <ActivityIndicator size="large" color={COLORS.primary} />
+      <ActivityIndicator size="large" color={colors.primary} />
       <Text style={styles.loadingText}>Cargando tus eventos como comité...</Text>
     </View>
   ) : filteredCommitteeEvents.length === 0 ? (
     <View style={styles.emptyState}>
-      <Ionicons name="calendar-outline" size={40} color={COLORS.textTertiary} />
-      <Text style={styles.emptyStateText}>
+      <Ionicons name="calendar-outline" size={40} color={colors.textTertiary} />
+      <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>
         No hay eventos en esta categoría.
       </Text>
     </View>
@@ -1374,7 +1385,7 @@ const handleActionPress = (action) => {
   ) : eventosFacultad.length === 0 ? (
     <View style={styles.emptyState}>
       <Ionicons name="people-outline" size={40} color={COLORS.textTertiary} />
-      <Text style={styles.emptyStateText}>No hay estudiantes inscritos aún.</Text>
+      <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>No hay estudiantes inscritos aún.</Text>
     </View>
   ) : (
     eventosFacultad.map((evento) => (
@@ -1423,8 +1434,8 @@ const handleActionPress = (action) => {
 </View>
         <View style={styles.actionsSectionMinimal}>
           <View style={styles.sectionHeaderMinimal}>
-            <Text style={styles.sectionTitleMinimal}>Herramientas de Gestión</Text>
-            <Text style={styles.sectionSubtitleMinimal}>Acceda a las funcionalidades principales</Text>
+            <Text style={[styles.sectionTitleMinimal, { color: colors.textPrimary }]}>Herramientas de Gestión</Text>
+            <Text style={[styles.sectionSubtitleMinimal, { color: colors.textSecondary }]}>Acceda a las funcionalidades principales</Text>
           </View>
           <View style={styles.actionsGridMinimal}>
             <FlatList
@@ -1436,6 +1447,7 @@ const handleActionPress = (action) => {
                   onPress={() => handleActionPress(item)}
                   cardWidth={actionsCardWidth}
                   index={index}
+                  colors={colors}
                 />
               )}
               numColumns={actionsColumns}
@@ -1452,6 +1464,7 @@ const handleActionPress = (action) => {
         onActionPress={handleActionPress}
         isExpanded={isBannerExpanded}
         onToggleExpanded={() => setIsBannerExpanded(!isBannerExpanded)}
+        colors={colors}
       />
        <NotificationsModal
         visible={showNotifications}
@@ -1460,6 +1473,7 @@ const handleActionPress = (action) => {
         markAsRead={markNotificationAsRead}
         markAllAsRead={markAllAsRead}
         onNotificationPress={navigateByNotification}
+        colors={colors}
       />
 
      
@@ -1468,7 +1482,7 @@ const handleActionPress = (action) => {
     style={{
       position: 'absolute', bottom: 78, right: 20,
       width: 56, height: 56, borderRadius: 28,
-      backgroundColor: COLORS.primary,
+      backgroundColor: colors.primary,
       justifyContent: 'center', alignItems: 'center',
       elevation: 8, shadowColor: '#000',
       shadowOffset: { width: 0, height: 4 },
@@ -1476,7 +1490,7 @@ const handleActionPress = (action) => {
     }}
     onPress={() => setIsChatOpen(true)}
   >
-    <Ionicons name="chatbubble-ellipses" size={24} color={COLORS.white} />
+    <Ionicons name="chatbubble-ellipses" size={24} color={colors.onPrimary} />
   </TouchableOpacity>
 )}
 
@@ -1488,21 +1502,21 @@ const handleActionPress = (action) => {
   }}>
     <View style={{
       width: '88%', maxWidth: 400, height: '85%',
-      backgroundColor: '#F4F7F9',
+      backgroundColor: colors.surface,
       borderTopRightRadius: 20, borderBottomRightRadius: 20,
       marginLeft: 'auto', elevation: 10,
     }}>
       <View style={{
         flexDirection: 'row', justifyContent: 'space-between',
         alignItems: 'center', paddingHorizontal: 16, paddingVertical: 13,
-        backgroundColor: COLORS.surface, borderBottomWidth: 1,
-        borderColor: COLORS.border, borderTopRightRadius: 20,
+        backgroundColor: colors.surface, borderBottomWidth: 1,
+        borderColor: colors.border, borderTopRightRadius: 20,
       }}>
-        <Text style={{ fontSize: 18, fontWeight: '700', color: COLORS.textPrimary }}>
+        <Text style={{ fontSize: 18, fontWeight: '700', color: colors.textPrimary }}>
           Chat General
         </Text>
         <TouchableOpacity onPress={() => setIsChatOpen(false)} style={{ padding: 6 }}>
-          <Ionicons name="close" size={24} color={COLORS.textSecondary} />
+          <Ionicons name="close" size={24} color={colors.textSecondary} />
         </TouchableOpacity>
       </View>
       <View style={{ flex: 1 }}>
@@ -1535,7 +1549,7 @@ const handleActionPress = (action) => {
             onPress={() => setShowTelegramModal(false)} 
             style={styles.telegramCloseButton}
           >
-            <Ionicons name="close-circle" size={28} color={COLORS.textSecondary} />
+            <Ionicons name="close-circle" size={28} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
@@ -1543,7 +1557,7 @@ const handleActionPress = (action) => {
   {isTelegramLinked ? (
     <>
       <View style={styles.telegramLinkedInfo}>
-        <Ionicons name="checkmark-circle" size={60} color={COLORS.success} />
+        <Ionicons name="checkmark-circle" size={60} color={colors.success} />
         <Text style={styles.telegramLinkedText}>
           Tu cuenta está vinculada con Telegram
         </Text>
@@ -1559,19 +1573,19 @@ const handleActionPress = (action) => {
           Recibirás notificaciones de:
         </Text>
         <View style={styles.telegramBenefitItem}>
-          <Ionicons name="checkmark-circle" size={18} color={COLORS.success} />
+          <Ionicons name="checkmark-circle" size={18} color={colors.success} />
           <Text style={styles.telegramBenefitText}>
             Aprobación de eventos
           </Text>
         </View>
         <View style={styles.telegramBenefitItem}>
-          <Ionicons name="checkmark-circle" size={18} color={COLORS.success} />
+          <Ionicons name="checkmark-circle" size={18} color={colors.success} />
           <Text style={styles.telegramBenefitText}>
             Rechazo de eventos (con motivo)
           </Text>
         </View>
         <View style={styles.telegramBenefitItem}>
-          <Ionicons name="checkmark-circle" size={18} color={COLORS.success} />
+          <Ionicons name="checkmark-circle" size={18} color={colors.success} />
           <Text style={styles.telegramBenefitText}>
             Recordatorios 3 días antes del evento
           </Text>
@@ -1582,7 +1596,7 @@ const handleActionPress = (action) => {
         style={styles.telegramUnlinkButton}
         onPress={unlinkTelegram}
       >
-        <Ionicons name="link-outline" size={20} color={COLORS.accent} />
+        <Ionicons name="link-outline" size={20} color={colors.accent} />
         <Text style={styles.telegramUnlinkText}>Desvincular Telegram</Text>
       </TouchableOpacity>
     </>
@@ -1632,7 +1646,7 @@ const handleActionPress = (action) => {
           }
         }}
       >
-        <Ionicons name="send" size={20} color={COLORS.white} />
+        <Ionicons name="send" size={20} color={colors.white} />
         <Text style={styles.telegramOpenButtonText}>
           Abrir Bot en Telegram
         </Text>
@@ -1692,7 +1706,7 @@ const handleActionPress = (action) => {
           );
         }}
       >
-        <Ionicons name="refresh-outline" size={20} color={COLORS.white} />
+        <Ionicons name="refresh-outline" size={20} color={colors.white} />
         <Text style={styles.telegramRefreshText}>
           Ya vinculé mi cuenta
         </Text>
@@ -1711,7 +1725,7 @@ const handleActionPress = (action) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    //backgroundColor: COLORS.background,
   },
   committeeSection: {
   width: '100%',
@@ -1722,7 +1736,7 @@ const styles = StyleSheet.create({
   notificationBell: {
     padding: 8,
     borderRadius: 20,
-    backgroundColor: COLORS.background,
+    //backgroundColor: colors.background,
   },
    committeeTabsContainer: {
     marginBottom: 16,
@@ -1732,14 +1746,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: COLORS.background,
+    //backgroundColor: colors.background,
     marginRight: 8,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   committeeTabActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
+   // backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   committeeTabText: {
     fontSize: 13,
