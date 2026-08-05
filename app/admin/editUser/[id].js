@@ -16,8 +16,10 @@ import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const API_BASE_URL = 'https://unibackend-production.up.railway.app';
+
 const getTokenAsync = async () => {
   const TOKEN_KEY = 'adminAuthToken';
   if (Platform.OS === 'web') {
@@ -34,6 +36,24 @@ const getTokenAsync = async () => {
       console.error("Error al obtener token de SecureStore en nativo:", e);
       return null;
     }
+  }
+};
+
+// ✅ Nueva función: Obtener el ID del usuario actualmente logueado
+const getCurrentUserId = async () => {
+  try {
+    let userData = null;
+    if (Platform.OS === 'web') {
+      const stored = localStorage.getItem('usuario');
+      if (stored) userData = JSON.parse(stored);
+    } else {
+      const stored = await AsyncStorage.getItem('usuario');
+      if (stored) userData = JSON.parse(stored);
+    }
+    return userData?.id || userData?.idusuario || null;
+  } catch (e) {
+    console.error("Error al obtener usuario actual:", e);
+    return null;
   }
 };
 
@@ -65,6 +85,7 @@ const EditUser = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [user, setUser] = useState(null);
+  const [isOwnProfile, setIsOwnProfile] = useState(false); // ✅ Nuevo estado
   const [formData, setFormData] = useState({
     username: '',
     nombre: '',
@@ -88,105 +109,124 @@ const EditUser = () => {
     fetchCarreras();
   }, [id]);
 
-const fetchUserData = async () => {
-  try {
-    const token = await getTokenAsync();
-    console.log('🔑 EditUser: Token obtenido:', token ? `${token.substring(0, 20)}...` : 'NULL');
-    
-    if (!token) {
-      Alert.alert('Error', 'No autenticado. Por favor inicia sesión nuevamente.');
-      router.replace('/LoginAdmin');
-      return;
-    }
-
-    console.log(` EditUser: Solicitando usuario con ID: ${id}`);
-    
-    const response = await axios.get(`${API_BASE_URL}/users/${id}`, {
-      headers: { 
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    console.log('✅ EditUser: Respuesta completa del servidor:', JSON.stringify(response.data, null, 2));
-
-    const userData = response.data.user || response.data;
-    console.log('✅ EditUser: userData extraído:', JSON.stringify(userData, null, 2));
-    
-    setUser(userData);
-    
-    const formDataToSet = {
-      username: userData.username || '',
-      nombre: userData.nombre || '',
-      apellidopat: userData.apellidopat || '',
-      apellidomat: userData.apellidomat || '',
-      email: userData.email || '',
-      role: userData.role || 'daf',
-      habilitado: userData.habilitado === 'true' || userData.habilitado === true,
-      contrasenia: '',
-      idcarrera: userData.academico?.idcarrera || userData.idcarrera || '',
-      idfacultad: userData.academico?.facultad_id || userData.facultad_id || userData.idfacultad || ''
-    };
-    
-    console.log('✅ EditUser: formData a establecer:', JSON.stringify(formDataToSet, null, 2));
-    setFormData(formDataToSet);
-    
-  } catch (error) {
-    console.error('❌ EditUser: Error fetching user:', error);
-    
-    if (error.response) {
-      console.error('Status:', error.response.status);
-      console.error('Data:', JSON.stringify(error.response.data, null, 2));
+  const fetchUserData = async () => {
+    try {
+      const token = await getTokenAsync();
+      console.log('🔑 Token obtenido:', token ? `${token.substring(0, 20)}...` : 'NULL');
       
-      if (error.response.status === 403) {
-        Alert.alert('Sin Permisos', 'No tienes permisos para ver este usuario.');
-      } else if (error.response.status === 401) {
-        Alert.alert('Sesión Expirada', 'Tu sesión ha expirado.');
+      if (!token) {
+        Alert.alert('Error', 'No autenticado. Por favor inicia sesión nuevamente.');
         router.replace('/LoginAdmin');
-      } else {
-        Alert.alert('Error', error.response.data?.message || 'No se pudo cargar el usuario');
+        return;
       }
-    } else {
-      Alert.alert('Error', 'No se pudo conectar al servidor');
+
+      // ✅ Verificar si el usuario está editando su propio perfil
+      const currentUserId = await getCurrentUserId();
+      const targetUserId = parseInt(id);
+      const isOwn = currentUserId === targetUserId;
+      setIsOwnProfile(isOwn);
+      
+      console.log(`👤 Usuario actual ID: ${currentUserId}, Editando ID: ${targetUserId}, ¿Es propio?: ${isOwn}`);
+
+      let response;
+      
+      // ✅ Si es su propio perfil, usar /profile (funciona para cualquier rol)
+      // Si es otro usuario, usar /users/${id} (solo para admin)
+      if (isOwn) {
+        console.log(' Usando endpoint /profile (perfil propio)');
+        response = await axios.get(`${API_BASE_URL}/profile`, {
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+      } else {
+        console.log(`📡 Solicitando usuario con ID: ${id} (endpoint /users)`);
+        response = await axios.get(`${API_BASE_URL}/users/${id}`, {
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+      }
+
+      console.log('✅ Usuario recibido:', response.data);
+
+      const userData = response.data.user || response.data;
+      setUser(userData);
+      
+      setFormData({
+        username: userData.username || '',
+        nombre: userData.nombre || '',
+        apellidopat: userData.apellidopat || '',
+        apellidomat: userData.apellidomat || '',
+        email: userData.email || '',
+        role: userData.role || 'daf',
+        habilitado: userData.habilitado === 'true' || userData.habilitado === true,
+        contrasenia: '',
+        idcarrera: userData.academico?.idcarrera || userData.idcarrera || '',
+        idfacultad: userData.academico?.facultad_id || userData.facultad_id || userData.idfacultad || ''
+      });
+      
+    } catch (error) {
+      console.error('❌ Error fetching user:', error);
+      
+      if (error.response) {
+        console.error('Status:', error.response.status);
+        console.error('Data:', error.response.data);
+        
+        if (error.response.status === 403) {
+          Alert.alert(
+            'Sin Permisos', 
+            'No tienes permisos para editar este usuario. Solo puedes editar tu propio perfil.',
+            [{ text: 'OK', onPress: () => router.back() }]
+          );
+        } else if (error.response.status === 401) {
+          Alert.alert(
+            'Sesión Expirada', 
+            'Tu sesión ha expirado. Por favor inicia sesión nuevamente.',
+            [{ text: 'OK', onPress: () => router.replace('/LoginAdmin') }]
+          );
+        } else {
+          Alert.alert('Error', error.response.data?.message || 'No se pudo cargar el usuario');
+        }
+      } else {
+        Alert.alert('Error', 'No se pudo conectar al servidor');
+      }
+    } finally {
+      setLoading(false);
     }
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
-const fetchFacultades = async () => {
-  try {
-    const token = await getTokenAsync();
-    if (!token) return;
-    
-    const response = await axios.get(`${API_BASE_URL}/facultades`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    console.log('📚 Facultades cargadas:', response.data.length);
-    setFacultades(response.data);
-  } catch (error) {
-    console.error('Error fetching facultades:', error);
-    // No bloquear la carga si falla facultades
-  }
-};
+  const fetchFacultades = async () => {
+    try {
+      const token = await getTokenAsync();
+      if (!token) return;
+      
+      const response = await axios.get(`${API_BASE_URL}/facultades`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      console.log('📚 Facultades cargadas:', response.data.length);
+      setFacultades(response.data);
+    } catch (error) {
+      console.error('Error fetching facultades:', error);
+    }
+  };
 
-const fetchCarreras = async () => {
-  try {
-    const token = await getTokenAsync();
-    if (!token) return;
-    
-    const response = await axios.get(`${API_BASE_URL}/carreras`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    console.log('🎓 Carreras cargadas:', response.data.length);
-    setCarreras(response.data);
-  } catch (error) {
-    console.error('Error fetching carreras:', error);
-    console.error('Status:', error.response?.status);
-    console.error('Data:', error.response?.data);
-    // No bloquear la carga si falla carreras (error 500 del backend)
-  }
-};
+  const fetchCarreras = async () => {
+    try {
+      const token = await getTokenAsync();
+      if (!token) return;
+      
+      const response = await axios.get(`${API_BASE_URL}/carreras`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      console.log('🎓 Carreras cargadas:', response.data.length);
+      setCarreras(response.data);
+    } catch (error) {
+      console.error('Error fetching carreras:', error);
+    }
+  };
 
   const validateForm = () => {
     const newErrors = {};
@@ -219,50 +259,53 @@ const fetchCarreras = async () => {
         router.replace('/LoginAdmin');
         return;
       }
-       try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      console.log('👤 ROL DENTRO DEL TOKEN:', payload.role);
-      console.log('🆔 ID DENTRO DEL TOKEN:', payload.idusuario || payload.id);
-    } catch (e) {
-      console.error('Error al decodificar token', e);
-    }
-      // SOLO enviamos los campos que el usuario DAF puede tener
+
       const updateData = {
         username: formData.username.trim(),
         nombre: formData.nombre.trim(),
         apellidopat: formData.apellidopat.trim(),
         apellidomat: formData.apellidomat.trim(),
         email: formData.email.trim().toLowerCase(),
-        habilitado: formData.habilitado, // Envía el booleano directamente
+        habilitado: formData.habilitado,
       };
 
-      // Solo incluimos la contraseña si el usuario escribió algo nuevo
       if (formData.contrasenia && formData.contrasenia.trim() !== '') {
         updateData.contrasenia = formData.contrasenia.trim();
       }
 
       console.log('📤 Payload que se enviará:', updateData);
 
-      const response = await axios.put(`${API_BASE_URL}/users/${id}`, updateData, {
+      // ✅ Usar el endpoint correcto según si es perfil propio o no
+      const endpoint = isOwnProfile 
+        ? `${API_BASE_URL}/profile` 
+        : `${API_BASE_URL}/users/${id}`;
+      
+      console.log(`📡 Enviando PUT a: ${endpoint}`);
+
+      const response = await axios.put(endpoint, updateData, {
         headers: { 
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
-       console.log('✅ Respuesta del servidor:', response.data)
+      
+      console.log('✅ Respuesta del servidor:', response.data);
 
-       Alert.alert(
+      Alert.alert(
         '¡Éxito!',
-        'El usuario DAF ha sido actualizado correctamente.',
+        'El usuario ha sido actualizado correctamente.',
         [
           {
             text: 'OK',
             onPress: () => {
-              // Navegamos explícitamente a la lista y enviamos un parámetro único para forzar la recarga
-              router.push({
-                pathname: '/admin/UsuariosDaf', // ⚠️ Asegúrate que esta sea la ruta exacta de tu lista
-                params: { refresh: Date.now().toString() } 
-              });
+              if (isOwnProfile) {
+                router.back();
+              } else {
+                router.push({
+                  pathname: '/admin/UsuariosDaf',
+                  params: { refresh: Date.now().toString() }
+                });
+              }
             }
           }
         ]
@@ -275,7 +318,7 @@ const fetchCarreras = async () => {
         
         let msg = 'No se pudo actualizar el usuario';
         if (error.response.status === 403) {
-          msg = error.response.data?.message || 'No tienes permisos (403). Verifica que tu token sea de administrador.';
+          msg = error.response.data?.message || 'No tienes permisos (403).';
         } else if (error.response.status === 400) {
           msg = error.response.data?.message || 'Datos inválidos (400).';
         }
@@ -310,7 +353,7 @@ const fetchCarreras = async () => {
     <SafeAreaView style={styles.container}>
       <Stack.Screen
         options={{
-          title: 'Editar Usuario',
+          title: isOwnProfile ? 'Editar mi Perfil' : 'Editar Usuario',
           headerStyle: { backgroundColor: COLORS.primary },
           headerTintColor: '#fff',
           headerTitleStyle: { fontWeight: 'bold' },
@@ -432,18 +475,21 @@ const fetchCarreras = async () => {
               </View>
             </View>
 
-            <View style={styles.switchRow}>
-              <View style={styles.switchLabel}>
-                <Text style={styles.label}>Usuario Habilitado</Text>
-                <Text style={styles.hintText}>Permitir acceso al sistema</Text>
+            {/* ✅ Solo mostrar el switch de "Habilitado" si NO es perfil propio */}
+            {!isOwnProfile && (
+              <View style={styles.switchRow}>
+                <View style={styles.switchLabel}>
+                  <Text style={styles.label}>Usuario Habilitado</Text>
+                  <Text style={styles.hintText}>Permitir acceso al sistema</Text>
+                </View>
+                <Switch
+                  value={formData.habilitado}
+                  onValueChange={(value) => handleInputChange('habilitado', value)}
+                  trackColor={{ false: COLORS.border, true: COLORS.primaryLight }}
+                  thumbColor={formData.habilitado ? COLORS.primary : COLORS.textTertiary}
+                />
               </View>
-              <Switch
-                value={formData.habilitado}
-                onValueChange={(value) => handleInputChange('habilitado', value)}
-                trackColor={{ false: COLORS.border, true: COLORS.primaryLight }}
-                thumbColor={formData.habilitado ? COLORS.primary : COLORS.textTertiary}
-              />
-            </View>
+            )}
           </View>
 
           {/* Información Académica (si aplica) */}
