@@ -88,10 +88,10 @@ const EditUser = () => {
     fetchCarreras();
   }, [id]);
 
-  const fetchUserData = async () => {
+const fetchUserData = async () => {
   try {
     const token = await getTokenAsync();
-    console.log('🔑 Token obtenido:', token ? `${token.substring(0, 20)}...` : 'NULL');
+    console.log('🔑 EditUser: Token obtenido:', token ? `${token.substring(0, 20)}...` : 'NULL');
     
     if (!token) {
       Alert.alert('Error', 'No autenticado. Por favor inicia sesión nuevamente.');
@@ -99,7 +99,7 @@ const EditUser = () => {
       return;
     }
 
-    console.log(`📡 Solicitando usuario con ID: ${id}`);
+    console.log(` EditUser: Solicitando usuario con ID: ${id}`);
     
     const response = await axios.get(`${API_BASE_URL}/users/${id}`, {
       headers: { 
@@ -108,11 +108,14 @@ const EditUser = () => {
       }
     });
 
-    console.log('✅ Usuario recibido:', response.data);
+    console.log('✅ EditUser: Respuesta completa del servidor:', JSON.stringify(response.data, null, 2));
 
     const userData = response.data.user || response.data;
+    console.log('✅ EditUser: userData extraído:', JSON.stringify(userData, null, 2));
+    
     setUser(userData);
-    setFormData({
+    
+    const formDataToSet = {
       username: userData.username || '',
       nombre: userData.nombre || '',
       apellidopat: userData.apellidopat || '',
@@ -123,26 +126,23 @@ const EditUser = () => {
       contrasenia: '',
       idcarrera: userData.academico?.idcarrera || userData.idcarrera || '',
       idfacultad: userData.academico?.facultad_id || userData.facultad_id || userData.idfacultad || ''
-    });
+    };
+    
+    console.log('✅ EditUser: formData a establecer:', JSON.stringify(formDataToSet, null, 2));
+    setFormData(formDataToSet);
+    
   } catch (error) {
-    console.error('❌ Error fetching user:', error);
+    console.error('❌ EditUser: Error fetching user:', error);
     
     if (error.response) {
       console.error('Status:', error.response.status);
-      console.error('Data:', error.response.data);
+      console.error('Data:', JSON.stringify(error.response.data, null, 2));
       
       if (error.response.status === 403) {
-        Alert.alert(
-          'Sin Permisos', 
-          'No tienes permisos para ver este usuario. Tu sesión podría haber expirado.',
-          [{ text: 'OK', onPress: () => router.back() }]
-        );
+        Alert.alert('Sin Permisos', 'No tienes permisos para ver este usuario.');
       } else if (error.response.status === 401) {
-        Alert.alert(
-          'Sesión Expirada', 
-          'Tu sesión ha expirado. Por favor inicia sesión nuevamente.',
-          [{ text: 'OK', onPress: () => router.replace('/LoginAdmin') }]
-        );
+        Alert.alert('Sesión Expirada', 'Tu sesión ha expirado.');
+        router.replace('/LoginAdmin');
       } else {
         Alert.alert('Error', error.response.data?.message || 'No se pudo cargar el usuario');
       }

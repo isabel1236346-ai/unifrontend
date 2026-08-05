@@ -86,57 +86,65 @@ const SettingsScreen = () => {
   }, []);
 
   const loadUserData = async () => {
-    try {
-      const token = await getTokenAsync();
-      console.log("⚙️ Settings: Token obtenido:", token ? `${token.substring(0, 20)}...` : 'NULL');
+  try {
+    const token = await getTokenAsync();
+    console.log("⚙️ Settings: Token obtenido:", token ? `${token.substring(0, 20)}...` : 'NULL');
 
-      if (!token) {
+    if (!token) {
+      Alert.alert(
+        'Autenticación Requerida',
+        'No se encontró el token. Por favor, inicia sesión de nuevo.',
+        [{ text: 'OK', onPress: () => router.replace('/LoginAdmin') }]
+      );
+      return;
+    }
+
+    console.log("⚙️ Settings: Solicitando perfil a la API...");
+    const response = await axios.get(`${API_BASE_URL}/profile`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+
+    console.log("✅ Settings: Datos del perfil recibidos:", JSON.stringify(response.data, null, 2));
+    const userData = response.data.user || response.data; // Manejar ambas estructuras
+
+    // ✅ Guardar TODOS los campos, no solo nombre
+    setUser({
+      id: userData.idusuario || userData.id || null,
+      username: userData.username || '',
+      nombre: userData.nombre || '',
+      apellidopat: userData.apellidopat || '',
+      apellidomat: userData.apellidomat || '',
+      email: userData.email || 'sin-email@ejemplo.com',
+      role: userData.role || 'admin',
+    });
+    
+    console.log("✅ Settings: User state actualizado:", JSON.stringify({
+      id: userData.idusuario || userData.id,
+      username: userData.username,
+      nombre: userData.nombre,
+      email: userData.email
+    }, null, 2));
+    
+  } catch (error) {
+    console.error("❌ Settings: Error al cargar perfil:", error);
+    if (error.response) {
+      console.error("❌ Settings: Status:", error.response.status);
+      console.error("❌ Settings: Data:", error.response.data);
+      
+      if (error.response.status === 401) {
         Alert.alert(
-          'Autenticación Requerida',
-          'No se encontró el token. Por favor, inicia sesión de nuevo.',
+          'Sesión Expirada',
+          'Tu sesión ha expirado. Por favor inicia sesión nuevamente.',
           [{ text: 'OK', onPress: () => router.replace('/LoginAdmin') }]
         );
         return;
       }
-
-      console.log("⚙️ Settings: Solicitando perfil a la API...");
-      const response = await axios.get(`${API_BASE_URL}/profile`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-
-      console.log("✅ Settings: Datos del perfil recibidos:", response.data);
-      const userData = response.data;
-
-      // ✅ Manejo flexible de nombres de campos (igual que en UsuarioA)
-      setUser({
-        id: userData.idusuario || userData.id || null,
-        nombre: `${userData.nombre || userData.username || ''} ${userData.apellidopat || ''}`.trim() || 'Usuario',
-        email: userData.email || 'sin-email@ejemplo.com',
-        role: userData.role || 'admin',
-      });
-    } catch (error) {
-      console.error("❌ Settings: Error al cargar perfil:", error);
-      if (error.response) {
-        console.error("❌ Settings: Status:", error.response.status);
-        console.error("❌ Settings: Data:", error.response.data);
-        
-        if (error.response.status === 401) {
-          Alert.alert(
-            'Sesión Expirada',
-            'Tu sesión ha expirado. Por favor inicia sesión nuevamente.',
-            [{ text: 'OK', onPress: () => router.replace('/LoginAdmin') }]
-          );
-          return;
-        }
-      } else if (error.request) {
-        console.error("❌ Settings: No hubo respuesta del servidor:", error.request);
-      }
-      
-      Alert.alert('Error', 'No se pudo cargar la información del perfil. Revisa la consola para más detalles.');
-    } finally {
-      setLoading(false);
     }
-  };
+    Alert.alert('Error', 'No se pudo cargar la información del perfil.');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleLogout = async () => {
     const performLogout = async () => {
