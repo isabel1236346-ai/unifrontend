@@ -43,19 +43,9 @@ const COLORS = {
 
 const getTokenAsync = async () => {
   if (Platform.OS === 'web') {
-    try {
-      return localStorage.getItem(TOKEN_KEY);
-    } catch (e) {
-      console.error("Error al acceder a localStorage en web:", e);
-      return null;
-    }
+    try { return localStorage.getItem(TOKEN_KEY); } catch (e) { return null; }
   } else {
-    try {
-      return await SecureStore.getItemAsync(TOKEN_KEY);
-    } catch (e) {
-      console.error("Error al obtener token de SecureStore en nativo:", e);
-      return null;
-    }
+    try { return await SecureStore.getItemAsync(TOKEN_KEY); } catch (e) { return null; }
   }
 };
 
@@ -76,7 +66,17 @@ const deleteTokenAsync = async () => {
 const SettingsScreen = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState({ id: null, nombre: '', email: '', role: '' });
+  
+  // ✅ 1. Estado inicial con TODOS los campos posibles
+  const [user, setUser] = useState({ 
+    id: null, 
+    username: '', 
+    nombre: '', 
+    apellidopat: '', 
+    apellidomat: '', 
+    email: '', 
+    role: '' 
+  });
   
   const [notificacionesActivas, setNotificacionesActivas] = useState(true);
   const [modoOscuro, setModoOscuro] = useState(false);
@@ -86,65 +86,48 @@ const SettingsScreen = () => {
   }, []);
 
   const loadUserData = async () => {
-  try {
-    const token = await getTokenAsync();
-    console.log("⚙️ Settings: Token obtenido:", token ? `${token.substring(0, 20)}...` : 'NULL');
-
-    if (!token) {
-      Alert.alert(
-        'Autenticación Requerida',
-        'No se encontró el token. Por favor, inicia sesión de nuevo.',
-        [{ text: 'OK', onPress: () => router.replace('/LoginAdmin') }]
-      );
-      return;
-    }
-
-    console.log("⚙️ Settings: Solicitando perfil a la API...");
-    const response = await axios.get(`${API_BASE_URL}/profile`, {
-      headers: { 'Authorization': `Bearer ${token}` },
-    });
-
-    console.log("✅ Settings: Datos del perfil recibidos:", JSON.stringify(response.data, null, 2));
-    const userData = response.data.user || response.data; // Manejar ambas estructuras
-
-    // ✅ Guardar TODOS los campos, no solo nombre
-    setUser({
-      id: userData.idusuario || userData.id || null,
-      username: userData.username || '',
-      nombre: userData.nombre || '',
-      apellidopat: userData.apellidopat || '',
-      apellidomat: userData.apellidomat || '',
-      email: userData.email || 'sin-email@ejemplo.com',
-      role: userData.role || 'admin',
-    });
-    
-    console.log("✅ Settings: User state actualizado:", JSON.stringify({
-      id: userData.idusuario || userData.id,
-      username: userData.username,
-      nombre: userData.nombre,
-      email: userData.email
-    }, null, 2));
-    
-  } catch (error) {
-    console.error("❌ Settings: Error al cargar perfil:", error);
-    if (error.response) {
-      console.error("❌ Settings: Status:", error.response.status);
-      console.error("❌ Settings: Data:", error.response.data);
-      
-      if (error.response.status === 401) {
-        Alert.alert(
-          'Sesión Expirada',
-          'Tu sesión ha expirado. Por favor inicia sesión nuevamente.',
-          [{ text: 'OK', onPress: () => router.replace('/LoginAdmin') }]
-        );
+    try {
+      const token = await getTokenAsync();
+      if (!token) {
+        Alert.alert('Autenticación Requerida', 'No se encontró el token.', [{ text: 'OK', onPress: () => router.replace('/LoginAdmin') }]);
         return;
       }
+
+      const response = await axios.get(`${API_BASE_URL}/profile`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+
+      // ✅ 2. Depuración extrema: Ver exactamente qué devuelve el backend
+      console.log("🔍 DEBUG RAW RESPONSE:", JSON.stringify(response.data, null, 2));
+      
+      const rawData = response.data;
+      // Manejar si el backend envía { user: {...} } o directamente {...}
+      const userData = rawData.user || rawData; 
+
+      console.log("🔍 DEBUG USER DATA PROCESSED:", JSON.stringify(userData, null, 2));
+
+      // ✅ 3. Mapeo robusto con múltiples posibles nombres de campos del backend
+      setUser({
+        id: userData.idusuario || userData.id || userData.id_usuario || null,
+        username: userData.username || userData.correo || userData.user || '',
+        nombre: userData.nombre || userData.nombres || '',
+        apellidopat: userData.apellidopat || userData.apellido_paterno || userData.apellidoPat || '',
+        apellidomat: userData.apellidomat || userData.apellido_materno || userData.apellidoMat || '',
+        email: userData.email || userData.correo || 'sin-email@ejemplo.com',
+        role: userData.role || userData.rol || 'admin',
+      });
+      
+    } catch (error) {
+      console.error("❌ Settings: Error al cargar perfil:", error);
+      if (error.response?.status === 401) {
+        Alert.alert('Sesión Expirada', 'Tu sesión ha expirado.', [{ text: 'OK', onPress: () => router.replace('/LoginAdmin') }]);
+        return;
+      }
+      Alert.alert('Error', 'No se pudo cargar la información del perfil. Revisa la consola.');
+    } finally {
+      setLoading(false);
     }
-    Alert.alert('Error', 'No se pudo cargar la información del perfil.');
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const handleLogout = async () => {
     const performLogout = async () => {
@@ -158,27 +141,17 @@ const SettingsScreen = () => {
     };
 
     if (Platform.OS === 'web') {
-      if (window.confirm('¿Está seguro que desea cerrar la sesión actual?')) {
-        await performLogout();
-      }
+      if (window.confirm('¿Está seguro que desea cerrar la sesión actual?')) await performLogout();
     } else {
-      Alert.alert(
-        'Confirmar Cierre de Sesión',
-        '¿Está seguro que desea cerrar la sesión actual?',
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          { text: 'Cerrar Sesión', style: 'destructive', onPress: performLogout },
-        ]
-      );
+      Alert.alert('Confirmar Cierre de Sesión', '¿Está seguro que desea cerrar la sesión actual?', [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Cerrar Sesión', style: 'destructive', onPress: performLogout },
+      ]);
     }
   };
 
   const handleTelegramPress = () => {
-    Alert.alert(
-      'Integración con Telegram',
-      'Para vincular o gestionar tu cuenta de Telegram, ve al Panel Principal y toca el icono de avión de papel en la cabecera.',
-      [{ text: 'Entendido', style: 'default' }]
-    );
+    Alert.alert('Integración con Telegram', 'Ve al Panel Principal y toca el icono de avión de papel en la cabecera.', [{ text: 'Entendido' }]);
   };
 
   if (loading) {
@@ -201,11 +174,7 @@ const SettingsScreen = () => {
           headerTintColor: '#fff',
           headerTitleStyle: { fontWeight: 'bold' },
           headerLeft: () => (
-            <TouchableOpacity 
-              onPress={() => router.back()} 
-              style={{ marginLeft: 15, padding: 5 }}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
+            <TouchableOpacity onPress={() => router.back()} style={{ marginLeft: 15, padding: 5 }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <Ionicons name="arrow-back" size={24} color="#fff" />
             </TouchableOpacity>
           ),
@@ -223,7 +192,32 @@ const SettingsScreen = () => {
               <Text style={styles.label}>Nombre de Usuario</Text>
               <View style={styles.inputContainer}>
                 <Ionicons name="person-outline" size={20} color={COLORS.textSecondary} />
-                <Text style={styles.inputText}>{user.nombre}</Text>
+                <Text style={styles.inputText}>{user.username || 'No especificado'}</Text>
+              </View>
+            </View>
+
+            {/* ✅ 4. Mostrar los campos por separado para verificar que cargan */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Nombre</Text>
+              <View style={styles.inputContainer}>
+                <Ionicons name="text-outline" size={20} color={COLORS.textSecondary} />
+                <Text style={styles.inputText}>{user.nombre || 'No especificado'}</Text>
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Apellido Paterno</Text>
+              <View style={styles.inputContainer}>
+                <Ionicons name="text-outline" size={20} color={COLORS.textSecondary} />
+                <Text style={styles.inputText}>{user.apellidopat || 'No especificado'}</Text>
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Apellido Materno</Text>
+              <View style={styles.inputContainer}>
+                <Ionicons name="text-outline" size={20} color={COLORS.textSecondary} />
+                <Text style={styles.inputText}>{user.apellidomat || 'No especificado'}</Text>
               </View>
             </View>
 
@@ -247,11 +241,13 @@ const SettingsScreen = () => {
 
             <TouchableOpacity
               onPress={() => {
+                console.log("🔵 Navegando con user.id:", user.id);
+                console.log("🔵 Estado completo de user:", JSON.stringify(user, null, 2));
+                
                 if (!user.id) {
                   Alert.alert('Error', 'No se pudo identificar tu ID de usuario.');
                   return;
                 }
-                console.log('Navegando a editar perfil con ID:', user.id);
                 router.push(`/admin/editUser/${user.id}`);
               }}
               style={styles.editProfileButton}
@@ -265,7 +261,6 @@ const SettingsScreen = () => {
           {/* Sección: Preferencias */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Preferencias</Text>
-
             <View style={styles.switchRow}>
               <View style={styles.switchLabel}>
                 <Text style={styles.label}>Notificaciones</Text>
@@ -278,9 +273,7 @@ const SettingsScreen = () => {
                 thumbColor={notificacionesActivas ? COLORS.primary : COLORS.textTertiary}
               />
             </View>
-
             <View style={styles.divider} />
-
             <View style={styles.switchRow}>
               <View style={styles.switchLabel}>
                 <Text style={styles.label}>Modo Oscuro</Text>
@@ -298,7 +291,6 @@ const SettingsScreen = () => {
           {/* Sección: Integraciones */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Integraciones</Text>
-
             <TouchableOpacity style={styles.settingItem} onPress={handleTelegramPress} activeOpacity={0.7}>
               <View style={[styles.iconBox, { backgroundColor: '#E3F2FD' }]}>
                 <Ionicons name="send" size={20} color="#0088cc" />
@@ -314,8 +306,7 @@ const SettingsScreen = () => {
           {/* Sección: Soporte y Acerca de */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Soporte</Text>
-
-            <TouchableOpacity style={styles.settingItem} onPress={() => Alert.alert('Soporte', 'Para ayuda, contacta a: sistemas@cidtec-uc.com')} activeOpacity={0.7}>
+            <TouchableOpacity style={styles.settingItem} onPress={() => Alert.alert('Soporte', 'Contacta a: sistemas@cidtec-uc.com')} activeOpacity={0.7}>
               <View style={[styles.iconBox, { backgroundColor: COLORS.success + '20' }]}>
                 <Ionicons name="help-circle-outline" size={20} color={COLORS.success} />
               </View>
@@ -325,9 +316,7 @@ const SettingsScreen = () => {
               </View>
               <Ionicons name="chevron-forward" size={20} color={COLORS.textTertiary} />
             </TouchableOpacity>
-
             <View style={styles.divider} />
-
             <TouchableOpacity style={styles.settingItem} onPress={() => Alert.alert('Acerca de', 'Sistema de Gestión de Eventos Universitarios\nVersión 1.2.0')} activeOpacity={0.7}>
               <View style={[styles.iconBox, { backgroundColor: COLORS.secondary + '20' }]}>
                 <Ionicons name="information-circle-outline" size={20} color={COLORS.secondary} />
@@ -342,18 +331,13 @@ const SettingsScreen = () => {
 
           {/* Botón de Cierre de Sesión */}
           <View style={styles.actions}>
-            <TouchableOpacity
-              style={styles.logoutButton}
-              onPress={handleLogout}
-              activeOpacity={0.8}
-            >
+            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.8}>
               <Ionicons name="log-out-outline" size={20} color={COLORS.white} />
               <Text style={styles.logoutButtonText}>Cerrar Sesión</Text>
             </TouchableOpacity>
           </View>
           
           <Text style={styles.versionText}>Desarrollado por CIDTEC-UC</Text>
-
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -386,7 +370,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
     borderBottomColor: COLORS.primaryLight,
   },
-  inputGroup: { marginBottom: 20 },
+  inputGroup: { marginBottom: 16 },
   label: { fontSize: 14, fontWeight: '600', color: COLORS.textPrimary, marginBottom: 8 },
   inputContainer: {
     flexDirection: 'row',
