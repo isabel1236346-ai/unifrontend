@@ -16,7 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
+import { useTheme } from '../../context/ThemeContext';
 const API_BASE_URL = 'https://unibackend-production.up.railway.app';
 const TOKEN_KEY = 'adminAuthToken'; 
 
@@ -66,8 +66,7 @@ const deleteTokenAsync = async () => {
 const SettingsScreen = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  
-  // ✅ Estado inicial con todos los campos que devuelve tu backend
+  const { colorScheme, setTheme } = useTheme(); 
   const [user, setUser] = useState({ 
     id: null, 
     nombre: '', 
@@ -260,11 +259,14 @@ const SettingsScreen = () => {
                 <Text style={styles.hintText}>Cambiar la apariencia de la aplicación</Text>
               </View>
               <Switch
-                value={modoOscuro}
-                onValueChange={setModoOscuro}
-                trackColor={{ false: COLORS.border, true: COLORS.primaryLight }}
-                thumbColor={modoOscuro ? COLORS.primary : COLORS.textTertiary}
-              />
+                value={colorScheme === 'dark'} // Se enciende si el tema es oscuro
+                onValueChange={(value) => {
+                    // Si value es true, ponemos 'dark', si es false, ponemos 'light'
+                    setTheme(value ? 'dark' : 'light');
+                }}
+                trackColor={{ false: '#D1D5DB', true: '#FFEDD5' }} // Colores del riel
+                thumbColor={colorScheme === 'dark' ? '#E95A0C' : '#9CA3AF'} // Color de la bolita
+                />
             </View>
           </View>
 
