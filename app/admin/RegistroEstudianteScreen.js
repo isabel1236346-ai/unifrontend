@@ -58,6 +58,7 @@ const CrearUsuarioEstudiante = () => {
 
   const [openCarrera, setOpenCarrera] = useState(false);
   const [carreraSeleccionada, setCarreraSeleccionada] = useState(null);
+  const [showSuccessActions, setShowSuccessActions] = useState(false);
   const [opcionesCarrera, setOpcionesCarrera] = useState([
     { label: 'Derecho', value: '1' }, { label: 'Psicología', value: '2' },
     { label: 'Periodismo', value: '3' }, { label: 'Administración de Empresas', value: '4' },
@@ -127,7 +128,6 @@ const CrearUsuarioEstudiante = () => {
     }
   };
 
-  // ✅ CORREGIDO: Obtiene facultades CON o SIN token
   useEffect(() => {
     const fetchFacultades = async () => {
       try {
@@ -231,6 +231,16 @@ const CrearUsuarioEstudiante = () => {
     setCurrentStep(prev => Math.max(prev - 1, 1));
   };
 
+  const resetForm = () => {
+  setFormData({
+    username: '', nombre: '', apellidopat: '', apellidomat: '',
+    email: '', contrasenia: '', habilitado: true,
+  });
+  setCarreraSeleccionada(null);
+  setFacultadSeleccionada(null);
+  setCurrentStep(1);
+  setErrors({});
+};
   const handleAddUser = async () => {
     if (!validateStep(3)) return;
     
@@ -257,20 +267,39 @@ const CrearUsuarioEstudiante = () => {
       };
       if (token) config.headers['Authorization'] = `Bearer ${token}`;
 
-      const response = await axios.post(`${API_BASE_URL}/auth/registerStudent`, newUserPayload, config);
+     const response = await axios.post(`${API_BASE_URL}/users`, newUserPayload, config);
 
       if (response.status === 201 || response.status === 200) {
-        setSuccessMessage('¡Estudiante creado correctamente!');
-        setTimeout(() => {
-          setFormData({ username: '', nombre: '', apellidopat: '', apellidomat: '', email: '', contrasenia: '', habilitado: true });
-          setCarreraSeleccionada(null);
-          setFacultadSeleccionada(null);
-          setCurrentStep(1);
-          setSuccessMessage(null);
-          router.replace('/'); // Redirige al login o home
-        }, 2000);
-        return;
+  setSuccessMessage('¡Estudiante creado correctamente!');
+  setShowSuccessActions(true);
+
+  setTimeout(() => {
+    setSuccessMessage(null);
+  }, 2500);
+
+  if (Platform.OS === 'web') {
+    setTimeout(() => {
+      if (window.confirm('✅ Estudiante creado. ¿Deseas crear otro?')) {
+        resetForm();
+      } else {
+        router.back(); // Vuelve al panel SIN cerrar sesión
       }
+    }, 2500);
+  } else {
+    setTimeout(() => {
+      Alert.alert(
+        '✅ Estudiante creado',
+        '¿Qué deseas hacer ahora?',
+        [
+          { text: 'Crear otro', onPress: () => resetForm(), style: 'default' },
+          { text: 'Volver al panel', onPress: () => router.back(), style: 'cancel' },
+        ],
+        { cancelable: false }
+      );
+    }, 2500);
+  }
+  return;
+}
     } catch (error) {
       console.error("Error al crear estudiante:", error);
       let errorMessage = 'Error desconocido al crear estudiante.';
@@ -464,7 +493,35 @@ const CrearUsuarioEstudiante = () => {
             </TouchableOpacity>
           </View>
         </ScrollView>
-        <Toast visible={!!successMessage} message={successMessage} />
+       <Toast visible={!!successMessage} message={successMessage} />
+
+{showSuccessActions && (
+  <View style={styles.successActionsContainer}>
+    <TouchableOpacity
+      style={styles.successActionButton}
+      onPress={() => {
+        resetForm();
+        setShowSuccessActions(false);
+        setSuccessMessage(null);
+      }}
+    >
+      <Ionicons name="person-add-outline" size={20} color="#fff" />
+      <Text style={styles.successActionText}>Crear otro</Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity
+      style={[styles.successActionButton, styles.successActionSecondary]}
+      onPress={() => {
+        setShowSuccessActions(false);
+        setSuccessMessage(null);
+        router.back();
+      }}
+    >
+      <Ionicons name="home-outline" size={20} color="#e95a0c" />
+      <Text style={[styles.successActionText, { color: '#e95a0c' }]}>Volver al panel</Text>
+    </TouchableOpacity>
+  </View>
+)}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -526,6 +583,41 @@ const styles = StyleSheet.create({
   toastContainer: { position: 'absolute', bottom: 60, left: 0, right: 0, alignItems: 'center', zIndex: 9999, paddingHorizontal: 20 },
   toastContent: { backgroundColor: '#27ae60', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 16, borderRadius: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 8, minWidth: 280 },
   toastText: { color: '#fff', fontSize: 16, fontWeight: '600', marginLeft: 12, textAlign: 'center' },
+  successActionsContainer: {
+  position: 'absolute',
+  bottom: 30,
+  left: 20,
+  right: 20,
+  flexDirection: 'row',
+  gap: 10,
+  zIndex: 9998,
+},
+successActionButton: {
+  flex: 1,
+  backgroundColor: '#27ae60',
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  paddingVertical: 14,
+  paddingHorizontal: 20,
+  borderRadius: 12,
+  gap: 8,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.2,
+  shadowRadius: 4,
+  elevation: 5,
+},
+successActionSecondary: {
+  backgroundColor: '#fff',
+  borderWidth: 2,
+  borderColor: '#e95a0c',
+},
+successActionText: {
+  color: '#fff',
+  fontSize: 15,
+  fontWeight: '600',
+},
 });
 
 export default CrearUsuarioEstudiante;
