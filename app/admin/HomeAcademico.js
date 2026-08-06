@@ -467,7 +467,12 @@ const HomeAcademicoScreen = () => {
   const nombreUsuario = params.nombre || 'Administrador';
   const router = useRouter();
   const { width: windowWidth } = useWindowDimensions();
-  const {colors, colorScheme} = useTheme();
+  const {
+  colors,
+  colorScheme,
+  setTheme: setGlobalTheme,
+  setAccentColor: setGlobalAccentColor,
+} = useTheme();
   const styles =createStyles(colors);
 
   const [notifications, setNotifications] = useState([]);
@@ -849,7 +854,6 @@ const fetchUserProfile = useCallback(async () => {
     
     const user = response.data;
     
-    // ✅ CORRECCIÓN: Verifica si el backend devuelve "Sin facultad" literal
     const facultad = user.facultad === "Sin facultad" 
       ? "Sin facultad asignada" 
       : user.facultad;
@@ -863,6 +867,11 @@ const fetchUserProfile = useCallback(async () => {
       role: user.role || 'academico',
       loading: false,
     });
+     const savedTheme  = user.theme       || 'light';
+    const savedAccent = user.color_acento || '#E95A0C';
+    setGlobalTheme(savedTheme);
+    setGlobalAccentColor(savedAccent);
+
     console.log('Perfil recibido:', response);
     if (Platform.OS === 'web') {
   localStorage.setItem('usuario', JSON.stringify({
@@ -882,7 +891,7 @@ const fetchUserProfile = useCallback(async () => {
     Alert.alert('Error', 'No se pudo cargar tu información personal.');
     setUserProfile((prev) => ({ ...prev, loading: false }));
   }
-}, []);
+}, [setGlobalTheme, setGlobalAccentColor]);
 
 useEffect(() => {
   const checkAuthAndLoadData = async () => {
@@ -1061,7 +1070,11 @@ const handleActionPress = (action) => {
   const performLogout = async () => {
     try {
       await deleteTokenAsync();
-      
+
+      // ✅ Resetear tema/color al default
+      setGlobalTheme('system');
+      setGlobalAccentColor('#E95A0C');
+
       // Limpiar estado local
       setDashboardStats([
         { title: 'Usuarios Activos', value: '—', icon: 'people-outline', color: COLORS.primary },
@@ -1096,10 +1109,10 @@ const handleActionPress = (action) => {
       '¿Está seguro que desea cerrar la sesión actual?',
       [
         { text: 'Cancelar', style: 'cancel' },
-        { 
-          text: 'Cerrar Sesión', 
-          style: 'destructive', 
-          onPress: performLogout 
+        {
+          text: 'Cerrar Sesión',
+          style: 'destructive',
+          onPress: performLogout,
         },
       ],
       { cancelable: true }
