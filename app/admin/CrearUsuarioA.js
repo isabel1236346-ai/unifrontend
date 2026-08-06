@@ -57,6 +57,7 @@ const CrearUsuarioA = () => {
   const [facultadSeleccionada, setFacultadSeleccionada] = useState(null);
   const [openFacultad, setOpenFacultad] = useState(false);
   const [opcionesFacultad, setOpcionesFacultad] = useState([]);
+  const [showSuccessActions, setShowSuccessActions] = useState(false);
   
   const [items] = useState([ 
     { label: 'Administrador', value: 'admin', icon: () => <Ionicons name="shield-checkmark" size={20} color="#e74c3c" /> },
@@ -344,22 +345,42 @@ const CrearUsuarioA = () => {
       });
 
       if (response.status === 201 || response.status === 200) {
-        setSuccessMessage(role === 'student' ? '¡Estudiante creado correctamente!' : '¡Usuario creado correctamente!');
-        setTimeout(() => {
-          setFormData({
-            username: '', nombre: '', apellidopat: '',
-            apellidomat: '', email: '', contrasenia: '', habilitado: true,
-          });
-          setRole(null);
-          setCarreraSeleccionada(null);
-          setFacultadSeleccionada(null);
-          setCarrerasDocente([]);
-          setCurrentStep(1);
-          setSuccessMessage(null);
-          router.replace('/Login'); // Ajustado a una ruta más lógica que Login
-        }, 2000);
-        return;
+  setSuccessMessage(role === 'student' ? '¡Estudiante creado correctamente!' : '¡Usuario creado correctamente!');
+  setShowSuccessActions(true);
+
+  setTimeout(() => {
+    setSuccessMessage(null);
+    
+    if (Platform.OS === 'web') {
+      if (window.confirm('✅ Usuario creado. ¿Deseas crear otro?')) {
+        // Crear otro: resetea y se queda en la pantalla
+        resetForm();
+      } else {
+        // Volver al panel SIN cerrar sesión
+        router.back();
       }
+    } else {
+      Alert.alert(
+        '✅ Usuario creado',
+        '¿Qué deseas hacer ahora?',
+        [
+          {
+            text: 'Crear otro',
+            onPress: () => resetForm(),
+            style: 'default',
+          },
+          {
+            text: 'Volver al panel',
+            onPress: () => router.back(),
+            style: 'cancel',
+          },
+        ],
+        { cancelable: false }
+      );
+    }
+  }, 2500);
+  return;
+}
       
     } catch (error) {
       console.error("Error al crear usuario:", error);
@@ -418,6 +439,23 @@ const CrearUsuarioA = () => {
     }
   };
 
+  const resetForm = () => {
+  setFormData({
+    username: '',
+    nombre: '',
+    apellidopat: '',
+    apellidomat: '',
+    email: '',
+    contrasenia: '',
+    habilitado: true,
+  });
+  setRole(null);
+  setCarreraSeleccionada(null);
+  setFacultadSeleccionada(null);
+  setCarrerasDocente([]);
+  setCurrentStep(1);
+  setErrors({});
+};
   const closeAllDropdowns = () => {
     setOpen(false);
     setOpenCarrera(false);
@@ -782,7 +820,34 @@ const CrearUsuarioA = () => {
             </TouchableOpacity>
           </View>
         </ScrollView>
-         <Toast visible={!!successMessage} message={successMessage} />
+         <Toast visible={!!successMessage} message={successMessage}  />
+         {showSuccessActions && (
+  <View style={styles.successActionsContainer}>
+    <TouchableOpacity
+      style={styles.successActionButton}
+      onPress={() => {
+        resetForm();
+        setShowSuccessActions(false);
+        setSuccessMessage(null);
+      }}
+    >
+      <Ionicons name="person-add-outline" size={20} color="#fff" />
+      <Text style={styles.successActionText}>Crear otro</Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity
+      style={[styles.successActionButton, styles.successActionSecondary]}
+      onPress={() => {
+        setShowSuccessActions(false);
+        setSuccessMessage(null);
+        router.back();
+      }}
+    >
+      <Ionicons name="home-outline" size={20} color="#e95a0c" />
+      <Text style={[styles.successActionText, { color: '#e95a0c' }]}>Volver al panel</Text>
+    </TouchableOpacity>
+  </View>
+)}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -897,6 +962,41 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3, shadowRadius: 6, elevation: 8, minWidth: 280,
   },
   toastText: { color: '#fff', fontSize: 16, fontWeight: '600', marginLeft: 12, textAlign: 'center' },
+  successActionsContainer: {
+     position: 'absolute',
+  bottom: 30,
+  left: 20,
+  right: 20,
+  flexDirection: 'row',
+  gap: 10,
+  zIndex: 9998,
+  },
+  successActionButton: {
+  flex: 1,
+  backgroundColor: '#27ae60',
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  paddingVertical: 14,
+  paddingHorizontal: 20,
+  borderRadius: 12,
+  gap: 8,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.2,
+  shadowRadius: 4,
+  elevation: 5,
+},
+successActionSecondary: {
+  backgroundColor: '#fff',
+  borderWidth: 2,
+  borderColor: '#e95a0c',
+},
+successActionText: {
+  color: '#fff',
+  fontSize: 15,
+  fontWeight: '600',
+},
 });
 
 export default CrearUsuarioA;
