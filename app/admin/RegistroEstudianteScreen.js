@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from 'expo-secure-store';
 import axios from 'axios'; 
 import DropDownPicker from 'react-native-dropdown-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 const API_BASE_URL = 'https://unibackend-production.up.railway.app';
@@ -115,24 +116,61 @@ const CrearUsuarioEstudiante = () => {
   const totalSteps = 3;
   
   const getToken = async () => {
-    const TOKEN_KEY = 'adminAuthToken'; // O 'studentAuthToken' si aplica
-    try {
-      if (Platform.OS === 'web') {
-        return localStorage.getItem(TOKEN_KEY);
-      } else {
-        return await SecureStore.getItemAsync(TOKEN_KEY);
-      }
-    } catch (error) {
-      console.error('Error obteniendo token:', error);
-      return null;
+  const TOKEN_KEY = 'adminAuthToken';
+  try {
+    let token = null;
+    
+    if (Platform.OS === 'web') {
+      token = localStorage.getItem(TOKEN_KEY);
+    } else {
+      token = await SecureStore.getItemAsync(TOKEN_KEY);
     }
-  };
+    
+    console.log('🔑 Token obtenido:', token ? `Existe (${token.substring(0, 20)}...)` : 'NO EXISTE');
+    
+    return token;
+  } catch (error) {
+    console.error('❌ Error obteniendo token:', error);
+    return null;
+  }
+};
 
+const handleAuthError = () => {
+  Alert.alert(
+    'Sesión Expirada',
+    'Tu sesión ha expirado o no tienes permisos. Por favor, inicia sesión nuevamente.',
+    [
+      { 
+        text: 'Iniciar Sesión', 
+        onPress: async () => {
+          // Limpiar token antes de redirigir
+          try {
+            if (Platform.OS === 'web') {
+              localStorage.removeItem('adminAuthToken');
+              localStorage.removeItem('usuario');
+            } else {
+              await SecureStore.deleteItemAsync('adminAuthToken');
+              await AsyncStorage.removeItem('usuario');
+            }
+          } catch (e) {
+            console.error('Error limpiando storage:', e);
+          }
+          router.replace('/LoginAdmin');
+        }
+      }
+    ]
+  );
+};
   useEffect(() => {
     const fetchFacultades = async () => {
       try {
         const token = await getToken();
-        
+         if (!token) {
+        console.error('❌ Sin token, redirigiendo al login');
+        handleAuthError();
+        return;
+      }
+
         const config = {
           timeout: 30000,
           headers: { 'Content-Type': 'application/json' }
@@ -151,12 +189,15 @@ const CrearUsuarioEstudiante = () => {
             value: facultad.facultad_id?.toString() || facultad.id?.toString() || ''
           })).filter(f => f.value && f.label);
           
+           console.log('✅ Facultades obtenidas:', facultadesFormateadas.length);
           setOpcionesFacultad(facultadesFormateadas);
         } else {
           throw new Error('Formato de respuesta inválido');
         }
       } catch (error) {
         console.error('❌ Error al obtener las Facultades:', error.message);
+         console.error('❌ Status:', error.response?.status);
+      console.error('❌ Data:', error.response?.data);
         // Fallback seguro para que la pantalla nunca se quede vacía
         setOpcionesFacultad([
           { label: 'Facultad de Ingeniería', value: '1' },
@@ -170,7 +211,6 @@ const CrearUsuarioEstudiante = () => {
     fetchFacultades();
   }, []);
 
-  // ✅ ELIMINADO: El useEffect de checkAuth que expulsaba al usuario no logueado.
 
   useEffect(() => {
     if (carreraSeleccionada) {
@@ -242,81 +282,84 @@ const CrearUsuarioEstudiante = () => {
   setErrors({});
 };
   const handleAddUser = async () => {
-    if (!validateStep(3)) return;
+  if (!validateStep(3)) return;
+  
+  setIsLoading(true);
+  try {
+    const token = await getToken();
     
-    setIsLoading(true);
-    try {
-      const token = await getToken();
-      
-      const newUserPayload = {
-        username: formData.username.trim(),
-        nombre: formData.nombre.trim(),
-        apellidopat: formData.apellidopat.trim(),
-        apellidomat: formData.apellidomat.trim(),
-        email: formData.email.trim().toLowerCase(),
-        contrasenia: formData.contrasenia,
-        role: role,
-        habilitado: formData.habilitado ? 1 : 0,
-        idcarrera: parseInt(carreraSeleccionada),
-        idfacultad: parseInt(facultadSeleccionada),
-      };
-     
-      const config = {
-        timeout: 30000,
-        headers: { 'Content-Type': 'application/json' }
-      };
-      if (token) config.headers['Authorization'] = `Bearer ${token}`;
-
-     const response = await axios.post(`${API_BASE_URL}/users`, newUserPayload, config);
-
-      if (response.status === 201 || response.status === 200) {
-  setSuccessMessage('¡Estudiante creado correctamente!');
-  setShowSuccessActions(true);
-
-  setTimeout(() => {
-    setSuccessMessage(null);
-  }, 2500);
-
-  if (Platform.OS === 'web') {
-    setTimeout(() => {
-      if (window.confirm('✅ Estudiante creado. ¿Deseas crear otro?')) {
-        resetForm();
-      } else {
-        router.back(); // Vuelve al panel SIN cerrar sesión
-      }
-    }, 2500);
-  } else {
-    setTimeout(() => {
-      Alert.alert(
-        '✅ Estudiante creado',
-        '¿Qué deseas hacer ahora?',
-        [
-          { text: 'Crear otro', onPress: () => resetForm(), style: 'default' },
-          { text: 'Volver al panel', onPress: () => router.back(), style: 'cancel' },
-        ],
-        { cancelable: false }
-      );
-    }, 2500);
-  }
-  return;
-}
-    } catch (error) {
-      console.error("Error al crear estudiante:", error);
-      let errorMessage = 'Error desconocido al crear estudiante.';
-      
-      if (error.response?.data) {
-        errorMessage = typeof error.response.data === 'string' 
-          ? error.response.data 
-          : (error.response.data.message || error.response.data.error || 'Error en el servidor');
-      } else if (error.request) {
-        errorMessage = 'No se pudo conectar con el servidor. Verifica tu internet.';
-      }
-
-      Alert.alert('Error', errorMessage, [{ text: 'OK' }]);
-    } finally {
+    // ✅ Si no hay token, redirigir al login
+    if (!token) {
+      console.error('❌ Sin token, redirigiendo al login');
+      handleAuthError();
       setIsLoading(false);
+      return;
     }
-  };
+    
+    const newUserPayload = {
+      username: formData.username.trim(),
+      nombre: formData.nombre.trim(),
+      apellidopat: formData.apellidopat.trim(),
+      apellidomat: formData.apellidomat.trim(),
+      email: formData.email.trim().toLowerCase(),
+      contrasenia: formData.contrasenia,
+      role: role,
+      habilitado: formData.habilitado ? 1 : 0,
+      idcarrera: parseInt(carreraSeleccionada),
+      idfacultad: parseInt(facultadSeleccionada),
+    };
+   
+    console.log('📦 Creando estudiante:', newUserPayload);
+    
+    const config = {
+      timeout: 30000,
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    };
+
+    const response = await axios.post(`${API_BASE_URL}/users`, newUserPayload, config);
+
+    console.log('✅ Estudiante creado:', response.status);
+
+    if (response.status === 201 || response.status === 200) {
+      setSuccessMessage('¡Estudiante creado correctamente!');
+      setShowSuccessActions(true);
+
+      setTimeout(() => {
+        setSuccessMessage(null);
+      }, 2500);
+
+      return;
+    }
+  } catch (error) {
+    console.error('❌ Error al crear estudiante:', error.message);
+    console.error('❌ Status:', error.response?.status);
+    console.error('❌ Data:', error.response?.data);
+    
+    // ✅ Manejar específicamente error 401
+    if (error.response?.status === 401) {
+      handleAuthError();
+      setIsLoading(false);
+      return;
+    }
+    
+    let errorMessage = 'Error desconocido al crear estudiante.';
+    
+    if (error.response?.data) {
+      errorMessage = typeof error.response.data === 'string' 
+        ? error.response.data 
+        : (error.response.data.message || error.response.data.error || 'Error en el servidor');
+    } else if (error.request) {
+      errorMessage = 'No se pudo conectar con el servidor. Verifica tu internet.';
+    }
+
+    Alert.alert('Error', errorMessage, [{ text: 'OK' }]);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const closeAllDropdowns = () => {
     setOpenCarrera(false);
