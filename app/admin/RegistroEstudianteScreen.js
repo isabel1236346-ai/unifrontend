@@ -116,7 +116,7 @@ const CrearUsuarioEstudiante = () => {
   const totalSteps = 3;
   
   const getToken = async () => {
-  const TOKEN_KEY = 'adminAuthToken';
+  const TOKEN_KEY = 'studentAuthToken';
   try {
     let token = null;
     
@@ -146,7 +146,7 @@ const handleAuthError = () => {
           // Limpiar token antes de redirigir
           try {
             if (Platform.OS === 'web') {
-              localStorage.removeItem('adminAuthToken');
+              localStorage.removeItem('studentAuthToken');
               localStorage.removeItem('usuario');
             } else {
               await SecureStore.deleteItemAsync('adminAuthToken');
