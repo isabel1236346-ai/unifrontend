@@ -240,6 +240,7 @@ const CrearUsuarioEstudiante = () => {
   setFacultadSeleccionada(null);
   setCurrentStep(1);
   setErrors({});
+  setShowSuccessActions(false);
 };
   const handleAddUser = async () => {
     if (!validateStep(3)) return;
@@ -270,36 +271,17 @@ const CrearUsuarioEstudiante = () => {
      const response = await axios.post(`${API_BASE_URL}/users`, newUserPayload, config);
 
       if (response.status === 201 || response.status === 200) {
-  setSuccessMessage('¡Estudiante creado correctamente!');
-  setShowSuccessActions(true);
+        setSuccessMessage('¡Estudiante creado correctamente!');
+        setShowSuccessActions(true);
 
-  setTimeout(() => {
-    setSuccessMessage(null);
-  }, 2500);
+        // Solo ocultar el toast después de unos segundos, 
+        // los botones de acción quedan visibles para que el usuario decida
+        setTimeout(() => {
+          setSuccessMessage(null);
+        }, 2500);
 
-  if (Platform.OS === 'web') {
-    setTimeout(() => {
-      if (window.confirm('✅ Estudiante creado. ¿Deseas crear otro?')) {
-        resetForm();
-      } else {
-        router.back(); // Vuelve al panel SIN cerrar sesión
+        return;
       }
-    }, 2500);
-  } else {
-    setTimeout(() => {
-      Alert.alert(
-        '✅ Estudiante creado',
-        '¿Qué deseas hacer ahora?',
-        [
-          { text: 'Crear otro', onPress: () => resetForm(), style: 'default' },
-          { text: 'Volver al panel', onPress: () => router.back(), style: 'cancel' },
-        ],
-        { cancelable: false }
-      );
-    }, 2500);
-  }
-  return;
-}
     } catch (error) {
       console.error("Error al crear estudiante:", error);
       let errorMessage = 'Error desconocido al crear estudiante.';
@@ -510,15 +492,15 @@ const CrearUsuarioEstudiante = () => {
     </TouchableOpacity>
 
     <TouchableOpacity
-      style={[styles.successActionButton, styles.successActionSecondary]}
-      onPress={() => {
-        setShowSuccessActions(false);
-        setSuccessMessage(null);
-        router.back();
-      }}
-    >
-      <Ionicons name="home-outline" size={20} color="#e95a0c" />
-      <Text style={[styles.successActionText, { color: '#e95a0c' }]}>Volver al panel</Text>
+        style={[styles.successActionButton, styles.successActionSecondary]}
+        onPress={() => {
+          setShowSuccessActions(false);
+          setSuccessMessage(null);
+          router.replace('/admin/HomeAcademico');
+        }}
+      >
+        <Ionicons name="home-outline" size={20} color="#e95a0c" />
+        <Text style={[styles.successActionText, { color: '#e95a0c' }]}>Volver al panel</Text>
     </TouchableOpacity>
   </View>
 )}
