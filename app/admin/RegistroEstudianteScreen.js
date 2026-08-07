@@ -117,7 +117,14 @@ const CrearUsuarioEstudiante = () => {
   
   const getToken = async () => {
   try {
-    // 1. Obtener el usuario actual del storage
+     if (Platform.OS === 'web') {
+      console.log('🔍 Claves en localStorage:', Object.keys(localStorage));
+      console.log('🔍 adminAuthToken existe:', !!localStorage.getItem('adminAuthToken'));
+      console.log('🔍 studentAuthToken existe:', !!localStorage.getItem('studentAuthToken'));
+    } else {
+      const allKeys = await SecureStore.getItemAsync('debug_keys');
+      console.log('🔍 Claves conocidas:', allKeys);
+    }
     let usuarioStr = null;
     if (Platform.OS === 'web') {
       usuarioStr = localStorage.getItem('usuario');
