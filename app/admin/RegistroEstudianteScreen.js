@@ -116,18 +116,64 @@ const CrearUsuarioEstudiante = () => {
   const totalSteps = 3;
   
   const getToken = async () => {
-  const TOKEN_KEY = 'studentAuthToken';
   try {
+    // 1. Obtener el usuario actual del storage
+    let usuarioStr = null;
+    if (Platform.OS === 'web') {
+      usuarioStr = localStorage.getItem('usuario');
+    } else {
+      usuarioStr = await AsyncStorage.getItem('usuario');
+    }
+
+    if (!usuarioStr) {
+      console.error('❌ No se encontró información de usuario');
+      return null;
+    }
+
+    const usuario = JSON.parse(usuarioStr);
+    console.log('👤 Usuario actual:', usuario.role);
+
+    // 2. Determinar la clave del token según el rol
+    let TOKEN_KEY;
+    switch (usuario.role) {
+      case 'admin':
+      case 'academico':
+      case 'daf':
+        TOKEN_KEY = 'adminAuthToken';
+        break;
+      case 'student':
+        TOKEN_KEY = 'studentAuthToken';
+        break;
+      case 'comunicacion':
+        TOKEN_KEY = 'comunicacionAuthToken';
+        break;
+      case 'TI':
+        TOKEN_KEY = 'tiAuthToken';
+        break;
+      case 'recursos':
+        TOKEN_KEY = 'recursosAuthToken';
+        break;
+      case 'Admisiones':
+        TOKEN_KEY = 'admisionesAuthToken';
+        break;
+      case 'Serv. Estudiatil':
+        TOKEN_KEY = 'serviciosEstudiantilesAuthToken';
+        break;
+      default:
+        console.warn('⚠️ Rol no reconocido:', usuario.role);
+        TOKEN_KEY = 'authToken';
+    }
+
+    // 3. Obtener el token con la clave correcta
     let token = null;
-    
     if (Platform.OS === 'web') {
       token = localStorage.getItem(TOKEN_KEY);
     } else {
       token = await SecureStore.getItemAsync(TOKEN_KEY);
     }
-    
-    console.log('🔑 Token obtenido:', token ? `Existe (${token.substring(0, 20)}...)` : 'NO EXISTE');
-    
+
+    console.log('🔑 Token obtenido:', token ? `Existe (${TOKEN_KEY})` : 'NO EXISTE');
+
     return token;
   } catch (error) {
     console.error('❌ Error obteniendo token:', error);
@@ -149,7 +195,7 @@ const handleAuthError = () => {
               localStorage.removeItem('studentAuthToken');
               localStorage.removeItem('usuario');
             } else {
-              await SecureStore.deleteItemAsync('adminAuthToken');
+              await SecureStore.deleteItemAsync('studentAuthToken');
               await AsyncStorage.removeItem('usuario');
             }
           } catch (e) {
