@@ -414,7 +414,60 @@ const handleAuthError = () => {
     setIsLoading(false);
   }
 };
+// ✅ INGRESAR DIRECTO: hace login automático con las credenciales del estudiante recién creado
+const handleDirectLogin = async () => {
+  try {
+    setIsLoading(true);
+    console.log('🔐 Intentando ingreso directo como:', formData.email);
 
+    const response = await axios.post(
+      `${API_BASE_URL}/auth/login`,
+      {
+        email: formData.email.trim().toLowerCase(),
+        password: formData.contrasenia,
+      },
+      { timeout: 30000 }
+    );
+
+    const { token, user } = response.data;
+
+    if (!token || !user) {
+      throw new Error('Respuesta de login inválida');
+    }
+
+    // Guardar sesión del estudiante (igual que lo hace el LoginScreen)
+    if (Platform.OS === 'web') {
+      localStorage.setItem('studentAuthToken', token);
+      localStorage.setItem('studentUserData', JSON.stringify(user));
+      localStorage.setItem('usuario', JSON.stringify({
+        id: user.id,
+        nombre: user.nombre || user.username,
+        role: user.role,
+      }));
+    } else {
+      await SecureStore.setItemAsync('studentAuthToken', token);
+      await SecureStore.setItemAsync('studentUserData', JSON.stringify(user));
+      await AsyncStorage.setItem('usuario', JSON.stringify({
+        id: user.id,
+        nombre: user.nombre || user.username,
+        role: user.role,
+      }));
+    }
+
+    console.log('✅ Ingreso directo exitoso, redirigiendo a HomeEstudiante');
+    setShowSuccessActions(false);
+    setSuccessMessage(null);
+    router.replace('/admin/HomeEstudiante');
+  } catch (error) {
+    console.error('❌ Error en ingreso directo:', error.response?.data || error.message);
+    Alert.alert(
+      'Error',
+      'No se pudo ingresar automáticamente. Inicia sesión manualmente con las credenciales creadas.'
+    );
+  } finally {
+    setIsLoading(false);
+  }
+};
   const closeAllDropdowns = () => {
     setOpenCarrera(false);
     setOpenFacultad(false);
@@ -594,28 +647,27 @@ const handleAuthError = () => {
 
 {showSuccessActions && (
   <View style={styles.successActionsContainer}>
+    {/* ✅ INGRESAR DIRECTO como el estudiante creado */}
     <TouchableOpacity
       style={styles.successActionButton}
-      onPress={() => {
-        resetForm();
-        setShowSuccessActions(false);
-        setSuccessMessage(null);
-      }}
+      onPress={handleDirectLogin}
+      disabled={isLoading}
     >
-      <Ionicons name="person-add-outline" size={20} color="#fff" />
-      <Text style={styles.successActionText}>Crear otro</Text>
+      <Ionicons name="log-in-outline" size={20} color="#fff" />
+      <Text style={styles.successActionText}>Ingresar directo</Text>
     </TouchableOpacity>
 
+    {/* ✅ VOLVER AL MENÚ del administrador */}
     <TouchableOpacity
       style={[styles.successActionButton, styles.successActionSecondary]}
       onPress={() => {
         setShowSuccessActions(false);
         setSuccessMessage(null);
-        router.back();
+        router.back(); // vuelve al panel de donde viniste
       }}
     >
       <Ionicons name="home-outline" size={20} color="#e95a0c" />
-      <Text style={[styles.successActionText, { color: '#e95a0c' }]}>Volver al panel</Text>
+      <Text style={[styles.successActionText, { color: '#e95a0c' }]}>Volver al menú</Text>
     </TouchableOpacity>
   </View>
 )}
