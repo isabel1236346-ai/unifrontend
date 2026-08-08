@@ -373,7 +373,7 @@ const handleAuthError = () => {
       }
     };
 
-    const response = await axios.post(`${API_BASE_URL}/users`, newUserPayload, config);
+    const response = await axios.post(`${API_BASE_URL}/auth/registerStudent`, newUserPayload, config);
 
     console.log('✅ Estudiante creado:', response.status);
 
