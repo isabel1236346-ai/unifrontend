@@ -116,6 +116,7 @@ const CrearUsuarioEstudiante = () => {
   const totalSteps = 3;
   
   const getToken = async () => {
+     const TOKEN_KEY = 'adminAuthToken';
   try {
      if (Platform.OS === 'web') {
       console.log('🔍 Claves en localStorage:', Object.keys(localStorage));
