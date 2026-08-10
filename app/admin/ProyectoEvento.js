@@ -217,6 +217,7 @@ const TimePicker = ({ value, onChange }) => {
   const changeTempMinute = (minute) => {
     setTempMinute(minute);
   };
+  
 
   if (Platform.OS === 'web') {
     return (
@@ -569,7 +570,8 @@ const TablaPresupuesto = ({
   </View>
 );
 
-const GoogleStyleCalendarView = ({ fechaHoraSeleccionada, setFechaHoraSeleccionada, eventos, title }) => {
+const GoogleStyleCalendarView = ({ fechaHoraSeleccionada, 
+  setFechaHoraSeleccionada, eventos, title,onDateWarning }) => {
   const getDaysInMonth = (date) => {
     const year = date.getFullYear();
     const month = date.getMonth();
@@ -606,6 +608,20 @@ const GoogleStyleCalendarView = ({ fechaHoraSeleccionada, setFechaHoraSelecciona
     setFechaHoraSeleccionada(newDate);
   };
 
+  const handleDayPress = (day) => {
+    const newDate = new Date(day.date);
+    newDate.setHours(fechaHoraSeleccionada.getHours());
+    newDate.setMinutes(fechaHoraSeleccionada.getMinutes());
+    setFechaHoraSeleccionada(newDate);
+      
+    const hoy = dayjs().startOf('day');
+    const fechaSel = dayjs(day.date).startOf('day');
+    const dias = fechaSel.diff(hoy, 'day');
+
+    if (onDateWarning && dias < 14) {
+      onDateWarning(dias);
+    }
+  };
   const days = getDaysInMonth(fechaHoraSeleccionada);
   const weekDays = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
@@ -653,6 +669,26 @@ const GoogleStyleCalendarView = ({ fechaHoraSeleccionada, setFechaHoraSelecciona
                 newDate.setHours(fechaHoraSeleccionada.getHours());
                 newDate.setMinutes(fechaHoraSeleccionada.getMinutes());
                 setFechaHoraSeleccionada(newDate);
+
+                const hoy = dayjs().startOf('day');
+                const fechaSeleccionada = dayjs(day.date).startOf('day');
+                const diasDiferencia = fechaSeleccionada.diff(hoy, 'day');
+
+                if (diasDiferencia < 14 && diasDiferencia >= 0) {
+                  const mensaje = `Recuerda que los eventos deben crearse con al menos 2 semanas (14 días) de anticipación.\n\nDías restantes: ${diasDiferencia}\n\nPodrás seleccionar esta fecha, pero el sistema validará la anticipación al momento de crear el evento.`;
+                  if (Platform.OS === 'web') {
+                    window.alert(`⚠️ Atención\n\n${mensaje}`);
+                  } else {
+                    Alert.alert('⚠️ Atención', mensaje, [{ text: 'Entendido' }]);
+                  }
+                } else if (diasDiferencia < 0) {
+                  const mensaje = 'No puedes seleccionar una fecha pasada. Por favor, elige una fecha futura.';
+                  if (Platform.OS === 'web') {
+                    window.alert(`❌ Fecha inválida\n\n${mensaje}`);
+                  } else {
+                    Alert.alert('❌ Fecha inválida', mensaje, [{ text: 'OK' }]);
+                  }
+                }
               }}
             >
               <View style={styles.dayCellContent}>
@@ -894,6 +930,22 @@ const ProyectoEvento = () => {
     setRecursosTecnologicos(nuevos);
   };
 
+  const validarAnticipacionDosSemanas = () => {
+  const hoy = dayjs().startOf('day');
+  const fechaEvento = dayjs(fechaHoraSeleccionada).startOf('day');
+  const diasDiferencia = fechaEvento.diff(hoy, 'day');
+  
+  if (diasDiferencia < 14) {
+    return {
+      valido: false,
+      diasDiferencia,
+      mensaje: diasDiferencia <= 0 
+        ? 'No puedes crear eventos en fechas pasadas o el mismo día. El evento debe crearse con al menos 2 semanas (14 días) de anticipación.'
+        : `El evento debe crearse con al menos 2 semanas (14 días) de anticipación. Solo faltan ${diasDiferencia} día(s) para la fecha seleccionada.`
+    };
+  }
+  return { valido: true, diasDiferencia, mensaje: '' };
+};
   const addMobiliario = () => setMobiliario(prev => [...prev, { nombre: '', cantidad: '' }]);
   const removeMobiliario = (index) => setMobiliario(prev => prev.filter((_, i) => i !== index));
   const updateMobiliario = (value, index, field) => {
@@ -1007,6 +1059,18 @@ const ProyectoEvento = () => {
     }
   };
 
+  const fetchEventos = async () => {
+  try {
+    const token = await getTokenAsync();
+    if (!token) return;
+    const response = await axios.get(`${API_BASE_URL}/eventos`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    setEventos(response.data || []);
+  } catch (error) {
+    console.error('Error al obtener eventos:', error);
+  }
+};
   const fetchUsuariosComite = async (retries = 3) => {
     console.log('🔄 Iniciando fetchUsuariosComite...');
     
@@ -1179,6 +1243,7 @@ const ProyectoEvento = () => {
       fetchNotifications();
       fetchUsuariosComite();
       fetchFacultades();
+      fetchEventos();
       const interval = setInterval(fetchNotifications, 30000);
       return () => clearInterval(interval);
     }
@@ -1398,8 +1463,22 @@ const ProyectoEvento = () => {
       Alert.alert('Formulario Incompleto', 'Por favor, corrige los campos marcados en rojo antes de continuar.');
       return;
     }
+     const validacionAnticipacion = validarAnticipacionDosSemanas();
+  if (!validacionAnticipacion.valido) {
+    if (Platform.OS === 'web') {
+      window.alert(`⚠️ Anticipación insuficiente\n\n${validacionAnticipacion.mensaje}\n\nPor favor, selecciona una fecha que sea al menos 14 días desde hoy.`);
+    } else {
+      Alert.alert(
+        '⚠️ Anticipación insuficiente',
+        `${validacionAnticipacion.mensaje}\n\nPor favor, selecciona una fecha que sea al menos 14 días desde hoy.`,
+        [{ text: 'Entendido' }]
+      );
+    }
+    return;
+  }
     setShowConfirmModal(true);
   };
+  
 
     const handleSubmitConfirmed = async () => {
     setShowConfirmModal(false);
@@ -1618,6 +1697,16 @@ const ProyectoEvento = () => {
                 setFechaHoraSeleccionada={setFechaHoraSeleccionada}
                 eventos={eventos}
                 title="Fecha de Realización"
+                onDateWarning={(dias) => {
+                  const mensaje = dias <= 0
+                    ? 'No puedes crear eventos en fechas pasadas.'
+                    : `⚠️ Recuerda: el evento debe crearse con mínimo 2 semanas (14 días) de anticipación.\nFaltan solo ${dias} día(s).`;
+                  if (Platform.OS === 'web') {
+                    window.alert(mensaje);
+                  } else {
+                    Alert.alert('Anticipación requerida', mensaje, [{ text: 'Entendido' }]);
+                  }
+                }}
               />
               <EventosDelDiaMejorado
                 eventosDelDia={eventosDelDia}
@@ -1705,6 +1794,17 @@ const ProyectoEvento = () => {
                   setFechaHoraSeleccionada={setFechaHoraSeleccionada}
                   eventos={eventos}
                   title="Fecha de Realización"
+                  onDateWarning={(dias) => {
+                    const mensaje = dias <= 0 
+                      ? 'No puedes crear eventos en fechas pasadas.'
+                      : `⚠️ Recuerda: el evento debe crearse con mínimo 2 semanas (14 días) de anticipación.\n\nFaltan solo ${dias} día(s) para la fecha seleccionada.`;
+                    
+                    if (Platform.OS === 'web') {
+                      window.alert(mensaje);
+                    } else {
+                      Alert.alert('Anticipación requerida', mensaje, [{ text: 'Entendido' }]);
+                    }
+                  }}
                 />
                 <EventosDelDiaMejorado
                   eventosDelDia={eventosDelDia}

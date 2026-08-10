@@ -671,6 +671,8 @@ const handleDirectLogin = async () => {
     </TouchableOpacity>
   </View>
 )}
+
+
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
