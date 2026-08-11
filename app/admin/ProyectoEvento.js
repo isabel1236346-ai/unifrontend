@@ -2031,9 +2031,9 @@ const ProyectoEvento = () => {
                           <Text style={styles.checkboxLabel}>{usuario.nombreCompleto}</Text>
                           <Text style={[styles.comiteUserRole, { fontSize: 12, color: '#666', fontStyle: 'italic' }]}>
                             {usuario.role === 'academico'
-                              ? `Académico - ${usuario.facultad || 'Sin facultad'}${usuario.carrera ? ` (${usuario.carrera})` : ''}`
-                              : usuario.role.charAt(0).toUpperCase() + usuario.role.slice(1)}
-                          </Text>
+                            ? `Académico - ${usuario.facultad || 'Sin facultad'}${usuario.carrera ? ` (${usuario.carrera})` : ''}`   // ❌ ANTES
+                            : usuario.role.charAt(0).toUpperCase() + usuario.role.slice(1)}
+                            </Text>
                         </View>
                       </TouchableOpacity>
                     ))}
