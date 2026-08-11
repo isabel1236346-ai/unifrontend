@@ -1440,114 +1440,114 @@ if (!tieneAlgunObjetivo) newErrors.objetivos = 'Selecciona al menos un objetivo.
   };
 
   const handleSubmitConfirmed = async () => {
-    setShowConfirmModal(false);
-    setIsLoading(true);
+  setShowConfirmModal(false);
+  setIsLoading(true);
+  
+  const token = await getTokenAsync();
+  if (!idevento) {
+    showAlert('Error', 'No se encontró el ID del evento.');
+    setIsLoading(false);
+    return;
+  }
+  if (!token) {
+    showAlert('Sesión expirada', 'Inicia sesión nuevamente.');
+    router.replace('/login');
+    setIsLoading(false);
+    return;
+  }
+
+  try {
+    const fechaLocal = dayjs(fechaHoraSeleccionada);
+    const eventoPayload = {
+      nombreevento: nombreevento.trim(),
+      lugarevento: lugarevento.trim() || 'Por definir',
+      fechaevento: fechaLocal.format('YYYY-MM-DD'),
+      horaevento: dayjs(fechaHoraSeleccionada).format('HH:mm:ss'),
+      argumentacion: argumentacion.trim() || null,
+      
+      resultados_esperados: JSON.stringify(resultadosEsperados),
+      
+      tipos_de_evento: Object.keys(tiposSeleccionados)
+        .filter(id => tiposSeleccionados[id])
+        .map(id => ({
+          id: parseInt(id, 10),
+          texto_personalizado: id === '5' && textoOtroTipo.trim() ? textoOtroTipo.trim() : undefined
+        })),
+      objetivos: [
+        ...Object.entries(objetivos)
+          .filter(([k, v]) => v === true && k !== 'otroTexto' && k !== 'otro')
+          .map(([k]) => ({ id: OBJETIVOS_EVENTO_MAP[k] })),
+        ...(objetivos.otro && objetivos.otroTexto?.trim()
+          ? [{ id: 6, texto_personalizado: objetivos.otroTexto.trim() }]
+          : objetivos.otro ? [{ id: 6 }] : []),
+        ...objetivosPDI
+          .filter(t => t.trim())
+          .map(t => ({ id: 6, texto_personalizado: t.trim() })),
+      ],
+      segmentos_objetivo: Object.entries(segmentoObjetivo)
+        .filter(([k, v]) => v && k !== 'otroTexto')
+        .map(([k]) => {
+          if (k === 'otro') return { id: 5, texto_personalizado: segmentoObjetivo.otroTexto || null };
+          const seg = SEGMENTO_OBJETIVO.find(s => ({estudiantes:'1',docentes:'2',publicoExterno:'3',influencers:'4'})[k] === s.id);
+          return seg ? { id: parseInt(seg.id), texto_personalizado: segmentosTextoPersonalizado[k] || null } : null;
+        }).filter(Boolean),
+      recursos_existentes: recursosSeleccionados.map(id => parseInt(id)).filter(id => !isNaN(id)),
+      recursos_nuevos: [
+        ...recursosTecnologicos.filter(r => r.nombre?.trim()).map(r => ({ nombre_recurso: r.nombre.trim(), cantidad: parseInt(r.cantidad)||1, recurso_tipo: 'tecnologico' })),
+        ...mobiliario.filter(r => r.nombre?.trim()).map(r => ({ nombre_recurso: r.nombre.trim(), cantidad: parseInt(r.cantidad)||1, recurso_tipo: 'mobiliario' })),
+        ...vajilla.filter(r => r.nombre?.trim()).map(r => ({ nombre_recurso: r.nombre.trim(), cantidad: parseInt(r.cantidad)||1, recurso_tipo: 'vajilla' }))
+      ],
+      presupuesto: {
+        egresos: egresos.filter(i => i.descripcion?.trim()).map(i => ({ descripcion: i.descripcion, cantidad: parseFloat(i.cantidad)||0, precio_unitario: parseFloat(i.precio)||0 })),
+        ingresos: ingresos.filter(i => i.descripcion?.trim()).map(i => ({ descripcion: i.descripcion, cantidad: parseFloat(i.cantidad)||0, precio_unitario: parseFloat(i.precio)||0 })),
+        total_egresos: totalEgresos,
+        total_ingresos: totalIngresos,
+        balance
+      },
+      idclasificacion: clasificacionSeleccionada ? parseInt(clasificacionSeleccionada) : null,
+      idsubcategoria: subcategoriaSeleccionada ? SUBCATEGORIA_ID_MAP[subcategoriaSeleccionada] : null,
+      comite: comiteSeleccionado.length > 0 ? comiteSeleccionado.map(id => parseInt(id)) : [],
+    };
+
+    console.log('🔗 URL:', `${API_BASE_URL}/eventos/${idevento}`);
     
-    const token = await getTokenAsync();
-    if (!idevento) {
-       showAlert('Error', 'No se encontró el ID del evento.');
-      setIsLoading(false);
-      return;
-    }
-    if (!token) {
-      showAlert('Sesión expirada', 'Inicia sesión nuevamente.');
-      router.replace('/login');
-      setIsLoading(false);
-      return;
-    }
+    const response = await axios.put(
+      `${API_BASE_URL}/eventos/${idevento}`, 
+      eventoPayload,
+      { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }
+    );
+    
+    console.log('✅ RESPUESTA BACKEND:', response.status, response.data);
 
-    try {
-      const fechaLocal = dayjs(fechaHoraSeleccionada);
-      const eventoPayload = {
-        // ✅ ELIMINADO idevento del body para evitar errores de validación estricta (400 Bad Request)
-        nombreevento: nombreevento.trim(),
-        lugarevento: lugarevento.trim() || 'Por definir',
-        fechaevento: fechaLocal.format('YYYY-MM-DD'),
-        horaevento: dayjs(fechaHoraSeleccionada).format('HH:mm:ss'),
-        argumentacion: argumentacion.trim() || null,
-        
-        resultados_esperados: JSON.stringify(resultadosEsperados),
-        
-        tipos_de_evento: Object.keys(tiposSeleccionados)
-          .filter(id => tiposSeleccionados[id])
-          .map(id => ({
-            id: parseInt(id, 10),
-            texto_personalizado: id === '5' && textoOtroTipo.trim() ? textoOtroTipo.trim() : undefined
-          })),
-        objetivos: [
-          ...Object.entries(objetivos)
-            .filter(([k, v]) => v === true && k !== 'otroTexto' && k !== 'otro')
-            .map(([k]) => ({ id: OBJETIVOS_EVENTO_MAP[k] })),
-          ...(objetivos.otro && objetivos.otroTexto?.trim()
-            ? [{ id: 6, texto_personalizado: objetivos.otroTexto.trim() }]
-            : objetivos.otro ? [{ id: 6 }] : []),
-          ...objetivosPDI
-            .filter(t => t.trim())
-            .map(t => ({ id: 6, texto_personalizado: t.trim() })),
-        ],
-        segmentos_objetivo: Object.entries(segmentoObjetivo)
-          .filter(([k, v]) => v && k !== 'otroTexto') // ✅ AHORA INCLUYE EL SEGMENTO "OTRO"
-          .map(([k]) => {
-            if (k === 'otro') return { id: 5, texto_personalizado: segmentoObjetivo.otroTexto || null };
-            const seg = SEGMENTO_OBJETIVO.find(s => ({estudiantes:'1',docentes:'2',publicoExterno:'3',influencers:'4'})[k] === s.id);
-            return seg ? { id: parseInt(seg.id), texto_personalizado: segmentosTextoPersonalizado[k] || null } : null;
-          }).filter(Boolean),
-        recursos_existentes: recursosSeleccionados.map(id => parseInt(id)).filter(id => !isNaN(id)),
-        recursos_nuevos: [
-          ...recursosTecnologicos.filter(r => r.nombre?.trim()).map(r => ({ nombre_recurso: r.nombre.trim(), cantidad: parseInt(r.cantidad)||1, recurso_tipo: 'tecnologico' })),
-          ...mobiliario.filter(r => r.nombre?.trim()).map(r => ({ nombre_recurso: r.nombre.trim(), cantidad: parseInt(r.cantidad)||1, recurso_tipo: 'mobiliario' })),
-          ...vajilla.filter(r => r.nombre?.trim()).map(r => ({ nombre_recurso: r.nombre.trim(), cantidad: parseInt(r.cantidad)||1, recurso_tipo: 'vajilla' }))
-        ],
-        presupuesto: {
-          egresos: egresos.filter(i => i.descripcion?.trim()).map(i => ({ descripcion: i.descripcion, cantidad: parseFloat(i.cantidad)||0, precio_unitario: parseFloat(i.precio)||0 })),
-          ingresos: ingresos.filter(i => i.descripcion?.trim()).map(i => ({ descripcion: i.descripcion, cantidad: parseFloat(i.cantidad)||0, precio_unitario: parseFloat(i.precio)||0 })),
-          total_egresos: totalEgresos,
-          total_ingresos: totalIngresos,
-          balance
-        },
-        idclasificacion: clasificacionSeleccionada ? parseInt(clasificacionSeleccionada) : null,
-        idsubcategoria: subcategoriaSeleccionada ? SUBCATEGORIA_ID_MAP[subcategoriaSeleccionada] : null,
-        comite: comiteSeleccionado.length > 0 ? comiteSeleccionado.map(id => parseInt(id)) : [],
-      };
-
-      console.log('🔗 URL:', `${API_BASE_URL}/eventos/${idevento}`);
-      
-      const response = await axios.put(
-        `${API_BASE_URL}/eventos/${idevento}`, 
-        eventoPayload,
-        { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }
+    if (mode === 'reprogramar' && response.data.estado !== 'pendiente') {
+      await axios.put(
+        `${API_BASE_URL}/eventos/${idevento}/status`,
+        { estado: 'pendiente' },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-      
-      console.log('✅ RESPUESTA BACKEND:', response.status, response.data);
-
-      if (mode === 'reprogramar' && response.data.estado !== 'pendiente') {
-        await axios.put(
-          `${API_BASE_URL}/eventos/${idevento}/status`,
-          { estado: 'pendiente' },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-      }
-      
-      // ✅ CORREGIDO: En Expo Router las rutas NO llevan ".js". 
-      // Usar router.back() es la forma más segura de salir de una pantalla de edición.
-      Alert.alert('Éxito', 'Evento actualizado correctamente.', [{ 
-        text: 'OK', 
-        onPress: () => router.back() 
-      }]);
-      
-    } catch (error) {
-      console.error('❌ ERROR DETALLADO AL EDITAR:', error.response?.data || error.message);
-      let errorMessage = 'Error desconocido al contactar al servidor.';
-      if (error.response?.data?.message) errorMessage = error.response.data.message;
-      else if (error.response?.status === 400) errorMessage = 'Datos inválidos. Revisa los campos requeridos.';
-      else if (error.response?.status === 401) errorMessage = 'Sesión expirada.';
-      
-      showAlert('Éxito', 'Evento actualizado correctamente.');
-      router.back();
-    } finally {
-      setIsLoading(false);
     }
-  };
+    
+    // ✅ CORREGIDO: usar showAlert que funciona en Web + Móvil
+    showAlert('✅ Éxito', 'Evento actualizado correctamente.');
+    
+    // Esperar un poco para que el usuario vea el mensaje
+    setTimeout(() => {
+      router.back();
+    }, 500);
+    
+  } catch (error) {
+    console.error('❌ ERROR DETALLADO AL EDITAR:', error.response?.data || error.message);
+    let errorMessage = 'Error desconocido al contactar al servidor.';
+    if (error.response?.data?.message) errorMessage = error.response.data.message;
+    else if (error.response?.status === 400) errorMessage = 'Datos inválidos. Revisa los campos requeridos.';
+    else if (error.response?.status === 401) errorMessage = 'Sesión expirada.';
+    
+    // ✅ CORREGIDO: mostrar mensaje de ERROR, no de éxito
+    showAlert('❌ Error al guardar', errorMessage);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.keyboardAvoidingContainer}>
