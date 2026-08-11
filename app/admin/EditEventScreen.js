@@ -258,27 +258,25 @@ const EditEventScreen = () => {
 
       console.log('✅ Respuesta del backend:', response.data);
 
-      // ✅ ALERTA CON NAVEGACIÓN CONFIABLE (Usando string en lugar de objeto)
-      Alert.alert(
-        '✓ Actualizado',
-        mode === 'reprogramar' 
-          ? 'El evento ha sido reprogramado exitosamente.'
-          : 'Los cambios han sido guardados correctamente.',
-        [
-          {
-            text: 'Ver detalles',
-            onPress: () => {
-              // ✅ Formato string con query param es más confiable en Expo Router
-              router.replace(`/admin/EventDetailScreen?eventId=${form.idevento}`);
-            }
-          },
-          {
-            text: 'Volver a pendientes',
-            onPress: () => router.replace('/admin/EventosPendientes'),
-            style: 'cancel'
-          }
-        ]
-      );
+    Alert.alert(
+  '✓ Actualizado',
+  mode === 'reprogramar' 
+    ? 'El evento ha sido reprogramado exitosamente.'
+    : 'Los cambios han sido guardados correctamente.',
+  [
+    {
+      text: 'Ver detalles',
+      onPress: () => {
+        router.replace(`/admin/EventDetailScreen?eventId=${form.idevento}`);
+      }
+    },
+    {
+      text: 'Volver a pendientes',
+      onPress: () => router.replace('/admin/EventosPendientes'),
+      style: 'cancel'
+    }
+  ]
+);
 
     } catch (error) {
       console.error('❌ Error detallado al guardar:', error);
