@@ -173,9 +173,7 @@ const SettingsScreen = () => {
     }
   };
 
-  const handleTelegramPress = () => {
-    Alert.alert('Integración con Telegram', 'Ve al Panel Principal y toca el icono de avión de papel en la cabecera.', [{ text: 'Entendido' }]);
-  };
+
 
   const styles = createStyles(colors);
 
@@ -339,19 +337,7 @@ const SettingsScreen = () => {
             )}
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Integraciones</Text>
-            <TouchableOpacity style={styles.settingItem} onPress={handleTelegramPress} activeOpacity={0.7}>
-              <View style={[styles.iconBox, { backgroundColor: '#E3F2FD' }]}>
-                <Ionicons name="send" size={20} color="#0088cc" />
-              </View>
-              <View style={styles.itemContent}>
-                <Text style={styles.itemTitle}>Telegram</Text>
-                <Text style={styles.itemSubtitle}>Gestionar notificaciones por Telegram</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
-            </TouchableOpacity>
-          </View>
+          
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Soporte</Text>
