@@ -58,7 +58,10 @@ const COLORS = {
   border: '#e2e8f0',
 };
 const DIAS_MINIMOS_APROBACION = 7;
-
+const MESES_ES = [
+  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+];  
 const getDaysRemainingDetail = (eventDate) => {
   if (!eventDate) return null;
   const today = new Date(); 
@@ -100,6 +103,17 @@ const isEventExpiredDetail = (eventDate) => {
 const formatDate = (dateString) => {
   if (!dateString) return 'No especificada';
   try {
+    if (typeof dateString === 'string') {
+      const iso = dateString.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (iso) {
+        return `${Number(iso[3])} de ${MESES_ES[Number(iso[2]) - 1]} de ${iso[1]}`;
+      }
+      const dmy = dateString.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      if (dmy) {
+        return `${Number(dmy[1])} de ${MESES_ES[Number(dmy[2]) - 1]} de ${dmy[3]}`;
+      }
+    }
+    // Cualquier otro formato → comportamiento anterior
     const date = new Date(dateString);
     return date.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
   } catch (error) {
