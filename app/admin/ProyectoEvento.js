@@ -2029,11 +2029,11 @@ const ProyectoEvento = () => {
                         <Ionicons name={comiteSeleccionado.includes(usuario.id) ? "checkbox" : "square-outline"} size={24} color={comiteSeleccionado.includes(usuario.id) ? "#e95a0c" : "#888"} />
                         <View style={styles.comiteUserText}>
                           <Text style={styles.checkboxLabel}>{usuario.nombreCompleto}</Text>
-                          <Text style={[styles.comiteUserRole, { fontSize: 12, color: '#666', fontStyle: 'italic' }]}>
-                            {usuario.role === 'academico'
-                            ? `Académico - ${usuario.facultad || 'Sin facultad'}${usuario.carrera ? ` (${usuario.carrera})` : ''}`   // ❌ ANTES
-                            : usuario.role.charAt(0).toUpperCase() + usuario.role.slice(1)}
-                            </Text>
+                         <Text style={[styles.comiteUserRole, { fontSize: 12, color: '#666', fontStyle: 'italic' }]}>
+                          {usuario.role === 'academico'
+                          ? `Académico - ${usuario.facultad || 'Sin facultad'}`
+                          : usuario.role.charAt(0).toUpperCase() + usuario.role.slice(1)}
+                          </Text>
                         </View>
                       </TouchableOpacity>
                     ))}
