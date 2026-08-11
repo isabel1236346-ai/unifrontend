@@ -391,7 +391,7 @@ const EventosCompletados = () => {
   const finalizedCount = eventosFase2.filter(e => isEventPast(e.date)).length;
   const uniqueFaculties = new Set(eventosFase2.map(e => e.faculty || 'Sin facultad')).size;
   const totalFase2 = eventosFase2.length;
-
+const eventosFuturos = eventosFase2.filter(e => !isEventToday(e.date) && !isEventPast(e.date));
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
@@ -452,11 +452,21 @@ const EventosCompletados = () => {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <View style={styles.emptyIconContainer}>
-                <Ionicons name="filter-outline" size={80} color={COLORS.grayMedium} />
+                <Ionicons 
+                  name={totalFase2 === 0 ? 'filter-outline' : 'time-outline'} 
+                  size={80} 
+                  color={COLORS.grayMedium} 
+                />
               </View>
-              <Text style={styles.emptyTitle}>No hay eventos de Fase 2</Text>
+              <Text style={styles.emptyTitle}>
+                {totalFase2 === 0 
+                  ? 'No hay eventos de Fase 2' 
+                  : 'Ningún evento disponible aún'}
+              </Text>
               <Text style={styles.emptyText}>
-                No se encontraron eventos de Fase 2 organizados por facultad
+                {totalFase2 === 0 
+                  ? 'No se encontraron eventos de Fase 2 organizados por facultad'
+                  : `Tienes ${eventosFuturos.length} evento${eventosFuturos.length !== 1 ? 's' : ''} de Fase 2 programado${eventosFuturos.length !== 1 ? 's' : ''}, pero aún ${eventosFuturos.length !== 1 ? 'no llegan' : 'no llega'} a su fecha. Aparecerán aquí el día del evento.`}
               </Text>
             </View>
           }
