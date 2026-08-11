@@ -346,7 +346,7 @@ const SettingsScreen = () => {
             </TouchableOpacity>
           </View>
           
-          <Text style={styles.versionText}>Desarrollado por CIDTEC-UC</Text>
+          <Text style={styles.versionText}>Desarrollado por Fla6346</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
