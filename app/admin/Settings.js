@@ -339,20 +339,6 @@ const SettingsScreen = () => {
 
           
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Soporte</Text>
-            <TouchableOpacity style={styles.settingItem} onPress={() => Alert.alert('Soporte', 'Contacta a: sistemas@cidtec-uc.com')} activeOpacity={0.7}>
-              <View style={[styles.iconBox, { backgroundColor: colors.success + '20' }]}>
-                <Ionicons name="help-circle-outline" size={20} color={colors.success} />
-              </View>
-              <View style={styles.itemContent}>
-                <Text style={styles.itemTitle}>Centro de Ayuda</Text>
-                <Text style={styles.itemSubtitle}>Preguntas frecuentes y contacto</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
-            </TouchableOpacity>
-          </View>
-
           <View style={styles.actions}>
             <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.8}>
               <Ionicons name="log-out-outline" size={20} color="#FFFFFF" />
