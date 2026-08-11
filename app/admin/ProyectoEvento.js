@@ -921,7 +921,7 @@ const ProyectoEvento = () => {
   const [facultades, setFacultades] = useState([]);
   const [facultadSeleccionada, setFacultadSeleccionada] = useState(null);
   const [showFacultadModal, setShowFacultadModal] = useState(false);
-
+  const [userIdActual, setUserIdActual] = useState(null);
   const addRecursoTecnologico = () => setRecursosTecnologicos(prev => [...prev, { nombre: '', cantidad: '' }]);
   const removeRecursoTecnologico = (index) => setRecursosTecnologicos(prev => prev.filter((_, i) => i !== index));
   const updateRecursoTecnologico = (value, index, field) => {
@@ -1048,16 +1048,17 @@ const ProyectoEvento = () => {
   };
 
   const fetchUserInfo = async () => {
-    if (!authToken) return null;
-    try {
+      if (!authToken) return null;
+      try {
       const response = await axios.get(`${API_BASE_URL}/auth/me`, { headers: { Authorization: `Bearer ${authToken}` } });
       setUserRole(response.data.role || response.data.rol);
+      setUserIdActual(response.data.id || response.data.idusuario || response.data.user_id); // ✅ Guardar ID
       return response.data;
-    } catch (error) {
+      } catch (error) {
       console.error('Error al obtener información del usuario:', error);
       return null;
-    }
-  };
+      }
+};
 
   const fetchEventos = async () => {
   try {
@@ -2011,7 +2012,9 @@ const ProyectoEvento = () => {
                   </View>
                 ) : usuariosComite.length > 0 ? (
                   <View style={styles.comiteList}>
-                    {usuariosComite.map(usuario => (
+                    {usuariosComite
+                    .filter(usuario => usuario.id !== userIdActual)
+                    .map(usuario => (
                       <TouchableOpacity
                         key={usuario.id}
                         style={styles.checkboxRow}
