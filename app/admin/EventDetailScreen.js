@@ -900,6 +900,13 @@ const EditEventScreen = () => {
     setMobiliario(nuevos);
   };
 
+  const showAlert = (title, message) => {
+  if (Platform.OS === 'web') {
+    window.alert(`${title}\n${message || ''}`);
+  } else {
+    Alert.alert(title, message);
+  }
+};
   const addVajilla = () => setVajilla(prev => [...prev, { nombre: '', cantidad: '' }]);
   const removeVajilla = (index) => setVajilla(prev => prev.filter((_, i) => i !== index));
   const updateVajilla = (value, index, field) => {
@@ -1372,11 +1379,12 @@ const scrollToSection = (sectionRef, setVisible, setScrolling, offset = 60) => {
     if (!sectionRef.current) return;
     setScrolling(true);
 
+    // ✅ WEB: el ref YA es el nodo DOM, usar scrollIntoView directo
     if (Platform.OS === 'web') {
-      const node = findNodeHandle(sectionRef.current);
-      if (node && typeof node.scrollIntoView === 'function') {
+      const node = sectionRef.current;
+      if (typeof node.scrollIntoView === 'function') {
         node.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      } else if (node && typeof node.getBoundingClientRect === 'function') {
+      } else if (typeof node.getBoundingClientRect === 'function') {
         const top = node.getBoundingClientRect().top + window.scrollY - offset;
         window.scrollTo({ top, behavior: 'smooth' });
       }
@@ -1384,26 +1392,16 @@ const scrollToSection = (sectionRef, setVisible, setScrolling, offset = 60) => {
       return;
     }
 
-    if (!scrollViewRef.current) {
-      setScrolling(false);
-      return;
-    }
+    // ✅ NATIVE: aquí findNodeHandle sí está soportado
     const scrollNode = findNodeHandle(scrollViewRef.current);
-    if (!scrollNode) {
-      setScrolling(false);
-      return;
-    }
-
+    if (!scrollNode) { setScrolling(false); return; }
     sectionRef.current.measureLayout(
       scrollNode,
       (x, y) => {
         scrollViewRef.current?.scrollTo({ y: y - offset, animated: true });
         setTimeout(() => setScrolling(false), 1000);
       },
-      (error) => {
-        console.warn('Error al medir sección:', error);
-        setScrolling(false);
-      }
+      () => setScrolling(false)
     );
   }, 150);
 };
@@ -1435,8 +1433,8 @@ if (!tieneAlgunObjetivo) newErrors.objetivos = 'Selecciona al menos un objetivo.
   const confirmSubmit = () => {
     if (isReadOnly) return;
     if (!validateForm()) {
-      Alert.alert('Formulario Incompleto', 'Por favor, corrige los campos marcados en rojo antes de continuar.');
-      return;
+      showAlert('Formulario Incompleto', 'Por favor, corrige los campos marcados en rojo antes de continuar.');
+    return;
     }
     setShowConfirmModal(true);
   };
@@ -1447,12 +1445,12 @@ if (!tieneAlgunObjetivo) newErrors.objetivos = 'Selecciona al menos un objetivo.
     
     const token = await getTokenAsync();
     if (!idevento) {
-      Alert.alert('Error', 'No se encontró el ID del evento.');
+       showAlert('Error', 'No se encontró el ID del evento.');
       setIsLoading(false);
       return;
     }
     if (!token) {
-      Alert.alert('Sesión expirada', 'Inicia sesión nuevamente.');
+      showAlert('Sesión expirada', 'Inicia sesión nuevamente.');
       router.replace('/login');
       setIsLoading(false);
       return;
@@ -1468,8 +1466,7 @@ if (!tieneAlgunObjetivo) newErrors.objetivos = 'Selecciona al menos un objetivo.
         horaevento: dayjs(fechaHoraSeleccionada).format('HH:mm:ss'),
         argumentacion: argumentacion.trim() || null,
         
-        // ✅ QUITADO JSON.stringify (Axios ya serializa el objeto, esto causaba doble comilla y error en backend)
-        resultados_esperados: resultadosEsperados, 
+        resultados_esperados: JSON.stringify(resultadosEsperados),
         
         tipos_de_evento: Object.keys(tiposSeleccionados)
           .filter(id => tiposSeleccionados[id])
@@ -1545,7 +1542,8 @@ if (!tieneAlgunObjetivo) newErrors.objetivos = 'Selecciona al menos un objetivo.
       else if (error.response?.status === 400) errorMessage = 'Datos inválidos. Revisa los campos requeridos.';
       else if (error.response?.status === 401) errorMessage = 'Sesión expirada.';
       
-      Alert.alert('Error al guardar', errorMessage);
+      showAlert('Éxito', 'Evento actualizado correctamente.');
+      router.back();
     } finally {
       setIsLoading(false);
     }
@@ -1594,9 +1592,9 @@ if (!tieneAlgunObjetivo) newErrors.objetivos = 'Selecciona al menos un objetivo.
         />
       </View>
       <View style={styles.mainContainer}>
-        {width <= 768 && (
-            <>
-              <Text style={styles.label}>Fecha de Realización</Text>
+        {width > 768 && (
+          <View style={styles.calendarColumn}>
+            <View style={styles.calendarSection}>
               <GoogleStyleCalendarView
                 fechaHoraSeleccionada={fechaHoraSeleccionada}
                 setFechaHoraSeleccionada={setFechaHoraSeleccionada}
@@ -1608,8 +1606,9 @@ if (!tieneAlgunObjetivo) newErrors.objetivos = 'Selecciona al menos un objetivo.
                 eventosDelDia={eventosDelDia}
                 fechaHoraSeleccionada={fechaHoraSeleccionada}
               />
-            </>
-          )}
+            </View>
+          </View>
+        )}
         <ScrollView
           ref={scrollViewRef}
           style={styles.formColumn}
