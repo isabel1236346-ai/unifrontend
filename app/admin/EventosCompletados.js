@@ -99,6 +99,14 @@ const isEventPast = (dateStr) => {
   today.setHours(0, 0, 0, 0);
   return eventDate < today;
 };
+const isEventToday = (dateStr) => {
+  if (!dateStr) return false;
+  const eventDate = parseEventDate(dateStr);
+  const today = new Date();
+  eventDate.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+  return eventDate.getTime() === today.getTime();
+};
 
 // ✅ FUNCIÓN DINÁMICA DEL BADGE
 const getMonthBadge = (dateStr) => {
@@ -122,7 +130,7 @@ const getMonthBadge = (dateStr) => {
 const groupEventsByStatusAndFaculty = (events) => {
   const eventosFase2 = events.filter(e => e.idfase === 2 || String(e.idfase) === '2');
   
-  const activos = eventosFase2.filter(e => !isEventPast(e.date));
+  const activos = eventosFase2.filter(e => isEventToday(e.date));
   const pasados = eventosFase2.filter(e => isEventPast(e.date));
   
   const sections = [];
