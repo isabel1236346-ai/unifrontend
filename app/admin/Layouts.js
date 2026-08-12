@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
+import { useEffect } from 'react';
 
 const API_BASE_URL = 'https://unibackend-production.up.railway.app';
 // Misma paleta que InventarioDAF.js para mantener consistencia visual
@@ -37,6 +38,21 @@ const getTokenAsync = async () => {
   try { return await SecureStore.getItemAsync('adminAuthToken'); } catch (e) { return null; }
 };
 
+const cargarLayouts = async () => {
+  setLoadingLayouts(true);
+  try {
+    const token = await getTokenAsync();
+    const response = await axios.get(`${API_BASE_URL}/layouts`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    setLayouts(response.data);
+  } catch (error) {
+    console.error('Error al cargar layouts:', error);
+  } finally {
+    setLoadingLayouts(false);
+  }
+};
+
 const uriToBlob = async (uri) => {
   const response = await fetch(uri);
   const blob = await response.blob();
@@ -48,7 +64,8 @@ const LayoutsScreen = () => {
   const [nombreLayout, setNombreLayout] = useState('');
   const [imagenUri, setImagenUri] = useState(null);
   const [loading, setLoading] = useState(false);
-
+  const [layouts, setLayouts] = useState([]);
+  const [loadingLayouts, setLoadingLayouts] = useState(true);
   const seleccionarImagen = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
@@ -107,7 +124,10 @@ const LayoutsScreen = () => {
       });
 
       Alert.alert('Éxito', 'Layout subido correctamente.');
-      router.back();
+      Alert.alert('Éxito', 'Layout subido correctamente.');
+      setNombreLayout('');
+      setImagenUri(null);
+      cargarLayouts(); 
 
     } catch (error) {
       console.error('Error al subir layout:', error);
@@ -118,6 +138,10 @@ const LayoutsScreen = () => {
   };
 
   const puedeSubir = nombreLayout.trim().length > 0 && !!imagenUri && !loading;
+
+  useEffect(() => {
+  cargarLayouts();
+}, []);
 
   return (
     <View style={st.container}>
@@ -136,7 +160,6 @@ const LayoutsScreen = () => {
 
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
 
-        {/* Banner informativo, mismo estilo que en Inventario */}
         <View style={st.infoBanner}>
           <Ionicons name="information-circle-outline" size={16} color={C.info} />
           <Text style={st.infoBannerText}>
@@ -144,7 +167,6 @@ const LayoutsScreen = () => {
           </Text>
         </View>
 
-        {/* Nombre */}
         <Text style={st.label}>Nombre del layout</Text>
         <View style={st.inputWrap}>
           <Ionicons name="pricetag-outline" size={17} color={C.t3} />
@@ -157,7 +179,6 @@ const LayoutsScreen = () => {
           />
         </View>
 
-        {/* Zona de imagen */}
         <Text style={st.label}>Imagen del layout</Text>
 
         {imagenUri ? (
@@ -184,7 +205,6 @@ const LayoutsScreen = () => {
           </TouchableOpacity>
         )}
 
-        {/* Botón subir */}
         <TouchableOpacity
           style={[st.submitBtn, !puedeSubir && st.submitBtnDisabled]}
           onPress={subirLayout}
@@ -200,6 +220,29 @@ const LayoutsScreen = () => {
             </>
           )}
         </TouchableOpacity>
+        {/* Layouts guardados */}
+          <Text style={[st.label, { marginTop: 28 }]}>Layouts guardados</Text>
+
+          {loadingLayouts ? (
+            <ActivityIndicator color={C.primary} style={{ marginTop: 20 }} />
+          ) : layouts.length === 0 ? (
+            <Text style={{ color: C.t3, fontSize: 13, textAlign: 'center', marginTop: 12 }}>
+              Aún no hay layouts guardados.
+            </Text>
+          ) : (
+            <View style={st.galleryGrid}>
+              {layouts.map((layout) => (
+                <View key={layout.idlayout} style={st.galleryCard}>
+                  <Image
+                    source={{ uri: layout.imagenUrl }}
+                    style={st.galleryImage}
+                    resizeMode="cover"
+                  />
+                  <Text style={st.galleryName} numberOfLines={1}>{layout.nombre}</Text>
+                </View>
+              ))}
+            </View>
+          )}
       </ScrollView>
     </View>
   );
@@ -235,7 +278,20 @@ const st = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 12, marginBottom: 20,
   },
   input: { flex: 1, fontSize: 14, color: C.t1, padding: 0 },
-
+galleryGrid: {
+  flexDirection: 'row', flexWrap: 'wrap', gap: 12,
+},
+galleryCard: {
+  width: '47%', backgroundColor: C.surface, borderRadius: 12,
+  borderWidth: 0.5, borderColor: C.border, overflow: 'hidden',
+},
+galleryImage: {
+  width: '100%', height: 110, backgroundColor: C.bg,
+},
+galleryName: {
+  fontSize: 12, fontWeight: '600', color: C.t1,
+  paddingHorizontal: 10, paddingVertical: 8,
+},
   dropZone: {
     backgroundColor: C.surface, borderRadius: 14, borderWidth: 1.5, borderStyle: 'dashed',
     borderColor: C.border, paddingVertical: 20, alignItems: 'center', gap: 4, marginBottom: 20,
