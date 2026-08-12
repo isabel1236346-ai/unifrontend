@@ -38,20 +38,7 @@ const getTokenAsync = async () => {
   try { return await SecureStore.getItemAsync('adminAuthToken'); } catch (e) { return null; }
 };
 
-const cargarLayouts = async () => {
-  setLoadingLayouts(true);
-  try {
-    const token = await getTokenAsync();
-    const response = await axios.get(`${API_BASE_URL}/layouts`, {
-      headers: { 'Authorization': `Bearer ${token}` },
-    });
-    setLayouts(response.data);
-  } catch (error) {
-    console.error('Error al cargar layouts:', error);
-  } finally {
-    setLoadingLayouts(false);
-  }
-};
+
 
 const uriToBlob = async (uri) => {
   const response = await fetch(uri);
@@ -84,7 +71,20 @@ const LayoutsScreen = () => {
       setImagenUri(result.assets[0].uri);
     }
   };
-
+  const cargarLayouts = async () => {
+  setLoadingLayouts(true);
+  try {
+    const token = await getTokenAsync();
+    const response = await axios.get(`${API_BASE_URL}/layouts`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    setLayouts(response.data);
+  } catch (error) {
+    console.error('Error al cargar layouts:', error);
+  } finally {
+    setLoadingLayouts(false);
+  }
+};
   const subirLayout = async () => {
     if (!nombreLayout.trim()) {
       Alert.alert('Error', 'Por favor ingresa un nombre para el layout.');
