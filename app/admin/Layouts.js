@@ -12,6 +12,7 @@ import {
   Image,
   Platform,
   StatusBar,
+  Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -53,6 +54,7 @@ const LayoutsScreen = () => {
   const [loading, setLoading] = useState(false);
   const [layouts, setLayouts] = useState([]);
   const [loadingLayouts, setLoadingLayouts] = useState(true);
+  const [layoutSeleccionado, setLayoutSeleccionado] = useState(null);
   const seleccionarImagen = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
@@ -85,6 +87,34 @@ const LayoutsScreen = () => {
     setLoadingLayouts(false);
   }
 };
+const eliminarLayout = async (layout) => {
+  const confirmar = Platform.OS === 'web'
+    ? window.confirm(`¿Eliminar "${layout.nombre}"? Esta acción no se puede deshacer.`)
+    : await new Promise((resolve) => {
+        Alert.alert(
+          'Eliminar layout',
+          `¿Eliminar "${layout.nombre}"? Esta acción no se puede deshacer.`,
+          [
+            { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
+            { text: 'Eliminar', style: 'destructive', onPress: () => resolve(true) },
+          ]
+        );
+      });
+
+  if (!confirmar) return;
+
+  try {
+    const token = await getTokenAsync();
+    await axios.delete(`${API_BASE_URL}/layouts/${layout.idlayout}`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    setLayoutSeleccionado(null);
+    cargarLayouts();
+  } catch (error) {
+    console.error('Error al eliminar layout:', error);
+    const msg = Platform.OS === 'web' ? window.alert('No se pudo eliminar el layout.') : Alert.alert('Error', 'No se pudo eliminar el layout.');
+  }
+  };
   const subirLayout = async () => {
     if (!nombreLayout.trim()) {
       Alert.alert('Error', 'Por favor ingresa un nombre para el layout.');
@@ -123,7 +153,6 @@ const LayoutsScreen = () => {
         },
       });
 
-      Alert.alert('Éxito', 'Layout subido correctamente.');
       Alert.alert('Éxito', 'Layout subido correctamente.');
       setNombreLayout('');
       setImagenUri(null);
@@ -230,23 +259,67 @@ const LayoutsScreen = () => {
               Aún no hay layouts guardados.
             </Text>
           ) : (
-            <View style={st.galleryGrid}>
-              {layouts.map((layout) => (
-                <View key={layout.idlayout} style={st.galleryCard}>
-                  <Image
-                    source={{ uri: layout.imagenUrl }}
-                    style={st.galleryImage}
-                    resizeMode="cover"
-                  />
-                  <Text style={st.galleryName} numberOfLines={1}>{layout.nombre}</Text>
-                </View>
-              ))}
-            </View>
+          <View style={st.galleryGrid}>
+            {layouts.map((layout) => (
+              <TouchableOpacity
+                key={layout.idlayout}
+                style={st.galleryCard}
+                onPress={() => setLayoutSeleccionado(layout)}
+                activeOpacity={0.8}
+              >
+                <Image
+                  source={{ uri: layout.imagenUrl }}
+                  style={st.galleryImage}
+                  resizeMode="cover"
+                />
+                <Text style={st.galleryName} numberOfLines={1}>{layout.nombre}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
           )}
       </ScrollView>
+
+      {/* Modal de vista ampliada */}
+      <Modal
+        visible={!!layoutSeleccionado}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setLayoutSeleccionado(null)}
+      >
+        <View style={st.modalOverlay}>
+          <View style={st.modalContent}>
+            <TouchableOpacity
+              style={st.modalClose}
+              onPress={() => setLayoutSeleccionado(null)}
+            >
+              <Ionicons name="close" size={22} color={C.t1} />
+            </TouchableOpacity>
+
+            {layoutSeleccionado && (
+              <>
+                <Image
+                  source={{ uri: layoutSeleccionado.imagenUrl }}
+                  style={st.modalImage}
+                  resizeMode="contain"
+                />
+                <Text style={st.modalTitle}>{layoutSeleccionado.nombre}</Text>
+
+                <TouchableOpacity
+                  style={st.deleteBtn}
+                  onPress={() => eliminarLayout(layoutSeleccionado)}
+                >
+                  <Ionicons name="trash-outline" size={18} color={C.surface} />
+                  <Text style={st.deleteBtnText}>Eliminar layout</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
+    
 
 const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
@@ -271,7 +344,30 @@ const st = StyleSheet.create({
   infoBannerText: { fontSize: 13, color: C.info, flex: 1, lineHeight: 18 },
 
   label: { fontSize: 13, fontWeight: '700', color: C.t1, marginBottom: 8 },
-
+  modalOverlay: {
+  flex: 1, backgroundColor: 'rgba(0,0,0,0.6)',
+  justifyContent: 'center', alignItems: 'center', padding: 20,
+},
+modalContent: {
+  backgroundColor: C.surface, borderRadius: 16, padding: 16,
+  width: '100%', maxWidth: 480, alignItems: 'center',
+},
+modalClose: {
+  alignSelf: 'flex-end', padding: 4, marginBottom: 4,
+},
+modalImage: {
+  width: '100%', height: 280, backgroundColor: C.bg, borderRadius: 12,
+},
+modalTitle: {
+  fontSize: 15, fontWeight: '700', color: C.t1, marginTop: 12, marginBottom: 16,
+},
+deleteBtn: {
+  flexDirection: 'row', alignItems: 'center', gap: 8,
+  backgroundColor: C.danger, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 10,
+},
+deleteBtnText: {
+  color: C.surface, fontSize: 14, fontWeight: '700',
+},
   inputWrap: {
     flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.surface,
     borderRadius: 12, borderWidth: 0.5, borderColor: C.border,
