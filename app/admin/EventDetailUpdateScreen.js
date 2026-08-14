@@ -253,21 +253,8 @@ const EventDetailScreen = () => {
     try {
       const token = await getTokenAsync();
       if (!token) throw new Error('Token inválido');
-      await axios.put(`${API_BASE_URL}/eventos/${event.id}/approve`, {}, {
-        headers: { Authorization: `Bearer ${token}` } 
-      });
+      await axios.put(`${API_BASE_URL}/eventos/${event.id}/approve`, {}, { headers: { Authorization: `Bearer ${token}` } });
       Alert.alert('Éxito', 'Evento aprobado correctamente');
-      try {
-      await axios.post(`${API_BASE_URL}/notificaciones/enviar-resumen-telegram`, 
-        { idevento: event.id },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      Alert.alert('Éxito', '✅ Evento aprobado\n📱 Notificación enviada al Telegram del creador');
-    } catch (notifError) {
-      console.warn('No se pudo enviar notificación Telegram:', notifError.message);
-      Alert.alert('Éxito parcial', 'Evento aprobado, pero no se pudo enviar la notificación a Telegram');
-    }
-    
       router.replace('./eventosPendientes');
     } catch (error) {
       Alert.alert('Error', 'No se pudo aprobar el evento: ' + error.message);
