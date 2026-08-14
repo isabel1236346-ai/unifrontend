@@ -530,7 +530,7 @@ const programacionEvento = () => {
         } catch (error) {
           console.error("Error al cargar el evento:", error);
           Alert.alert("Error", "No se pudo cargar el evento.");
-          router.replace('HomeAcademico');
+          router.back();
         } finally {
           if (isMountedRef.current) setIsLoadingEventos(false);
         }
@@ -607,7 +607,7 @@ const programacionEvento = () => {
         });
         Alert.alert('Éxito', 'Evento creado correctamente.');
       }
-      router.replace('HomeAcademico');
+      router.back();
     } catch (error) {
       console.error("Error al guardar evento:", error.response?.data || error.message);
       const errorMessage = error.response?.data?.message
