@@ -13,7 +13,8 @@ import { Calendar, LocaleConfig } from 'react-native-calendars';
 import dayjs from 'dayjs';
 import * as SecureStore from 'expo-secure-store';
 
-const API_BASE_URL = 'https://unibackend-production.up.railway.app';const TOKEN_KEY = 'adminAuthToken';
+const API_BASE_URL = 'https://unibackend-production.up.railway.app';
+const TOKEN_KEY = 'adminAuthToken';
 
 const parseDateLocal = (dateInput) => {
   if (!dateInput) return new Date();
@@ -120,7 +121,6 @@ LocaleConfig.locales['es'] = {
 };
 LocaleConfig.defaultLocale = 'es';
 
-// ─── Sección de Actividades ─────────────────────────────────────────────────
 const SeccionActividades = ({ titulo, actividades, setActividades, handleActividadDateChange, errors, fechaBase }) => {
   const baseDate = fechaBase instanceof Date && !isNaN(fechaBase.getTime()) ? fechaBase : new Date();
 
@@ -275,7 +275,6 @@ const SeccionActividades = ({ titulo, actividades, setActividades, handleActivid
   );
 };
 
-// ─── Componente Principal ───────────────────────────────────────────────────
 const programacionEvento = () => {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -423,9 +422,6 @@ const programacionEvento = () => {
     }
   };
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // ✅ CARGA INICIAL CON parseDateLocal
-  // ═══════════════════════════════════════════════════════════════════════════
   useEffect(() => {
     const initializeAndFetch = async () => {
       const token = await getTokenAsync();
@@ -454,7 +450,6 @@ const programacionEvento = () => {
           setLugarevento(evento.lugarevento || '');
           setResponsable(evento.responsable_evento || '');
 
-          // ✅ CORREGIDO: Combinar fecha y hora respetando zona horaria local
           if (evento.fechaevento) {
             const fechaLocal = parseDateLocal(evento.fechaevento);
             if (evento.horaevento) {
@@ -466,7 +461,6 @@ const programacionEvento = () => {
 
           setIdtipoevento(evento.idtipoevento?.toString() || '');
 
-          // ✅ CORREGIDO: Usar parseDateLocal en todas las fechas
           if (Array.isArray(evento.actividadesPrevias)) {
             setActividadesPrevias(evento.actividadesPrevias.map((act, i) => ({
               key: `act-prev-${i}-${Date.now()}-${Math.random()}`,
@@ -536,7 +530,7 @@ const programacionEvento = () => {
         } catch (error) {
           console.error("Error al cargar el evento:", error);
           Alert.alert("Error", "No se pudo cargar el evento.");
-          router.back();
+          router.replace('HomeAcademico');
         } finally {
           if (isMountedRef.current) setIsLoadingEventos(false);
         }
@@ -613,7 +607,7 @@ const programacionEvento = () => {
         });
         Alert.alert('Éxito', 'Evento creado correctamente.');
       }
-      router.back();
+      router.replace('HomeAcademico');
     } catch (error) {
       console.error("Error al guardar evento:", error.response?.data || error.message);
       const errorMessage = error.response?.data?.message
@@ -900,7 +894,6 @@ const programacionEvento = () => {
   );
 };
 
-// ─── Estilos ─────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   retryButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, paddingHorizontal: 15, borderWidth: 1, borderColor: '#e95a0c', borderRadius: 8, alignSelf: 'center', marginTop: 10 },
   retryButtonText: { marginLeft: 8, color: '#e95a0c', fontSize: 16, fontWeight: '500' },
