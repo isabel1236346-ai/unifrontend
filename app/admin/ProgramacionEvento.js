@@ -430,7 +430,7 @@ const programacionEvento = () => {
 
       if (!token) {
         Alert.alert('Error', 'No autenticado');
-        router.back();
+        router.navigate('/admin/EventosAprobados');
         return;
       }
 
