@@ -69,18 +69,39 @@ const getDaysRemainingDetail = (eventDate) => {
   let eventDateObj;
   
   if (typeof eventDate === 'string') {
-    if (/^\d{4}-\d{2}-\d{2}/.test(eventDate)) {
-      const datePart = eventDate.substring(0, 10);
-      const [year, month, day] = datePart.split('-').map(Number);
-      eventDateObj = new Date(year, month - 1, day);
-    } else if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(eventDate)) {
-      const [day, month, year] = eventDate.split('/').map(Number);
-      eventDateObj = new Date(year, month - 1, day);
-    } else { 
-      eventDateObj = new Date(eventDate); 
+    const trimmed = eventDate.trim();
+    
+    // ✅ Acepta 1 o 2 dígitos y usa constructor local (sin desfase UTC)
+    const isoMatch = trimmed.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (isoMatch) {
+      const [, year, month, day] = isoMatch;
+      eventDateObj = new Date(Number(year), Number(month) - 1, Number(day));
+    } else {
+      const dmyMatch = trimmed.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      if (dmyMatch) {
+        const [, day, month, year] = dmyMatch;
+        eventDateObj = new Date(Number(year), Number(month) - 1, Number(day));
+      } else {
+        // Fallback: extraer de ISO para evitar desfase
+        const date = new Date(eventDate);
+        const isoStr = date.toISOString();
+        const match = isoStr.match(/(\d{4})-(\d{2})-(\d{2})/);
+        if (match) {
+          eventDateObj = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+        } else {
+          eventDateObj = date;
+        }
+      }
     }
-  } else { 
-    eventDateObj = new Date(eventDate); 
+  } else {
+    eventDateObj = new Date(eventDate);
+    if (!isNaN(eventDateObj.getTime())) {
+      const isoStr = eventDateObj.toISOString();
+      const match = isoStr.match(/(\d{4})-(\d{2})-(\d{2})/);
+      if (match) {
+        eventDateObj = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+      }
+    }
   }
   
   if (isNaN(eventDateObj.getTime())) return null;
@@ -104,20 +125,34 @@ const formatDate = (dateString) => {
   if (!dateString) return 'No especificada';
   try {
     if (typeof dateString === 'string') {
-      const iso = dateString.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      const trimmed = dateString.trim();
+      
+      // ✅ Ahora acepta 1 o 2 dígitos para mes y día
+      const iso = trimmed.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
       if (iso) {
         return `${Number(iso[3])} de ${MESES_ES[Number(iso[2]) - 1]} de ${iso[1]}`;
       }
-      const dmy = dateString.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      
+      // ✅ Formato DD/MM/YYYY o D/M/YYYY
+      const dmy = trimmed.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
       if (dmy) {
         return `${Number(dmy[1])} de ${MESES_ES[Number(dmy[2]) - 1]} de ${dmy[3]}`;
       }
     }
-    // Cualquier otro formato → comportamiento anterior
+    
+    // ✅ Fallback robusto: extrae la fecha en UTC para evitar desfase
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) return String(dateString);
+    
+    const isoStr = date.toISOString();
+    const match = isoStr.match(/(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+      return `${Number(match[3])} de ${MESES_ES[Number(match[2]) - 1]} de ${match[1]}`;
+    }
+    
     return date.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
   } catch (error) {
-    return dateString;
+    return String(dateString);
   }
 };
 
