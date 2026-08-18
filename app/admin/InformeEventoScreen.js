@@ -193,6 +193,7 @@ const InformeEventoScreen = () => {
     }
     setter(updated);
   };
+  
   const addRow = (setter, rows) => setter([...rows, emptyEgresoRow()]);
   const removeRow = (setter, rows, index) => setter(rows.filter((_, i) => i !== index));
 
@@ -244,11 +245,12 @@ const InformeEventoScreen = () => {
       
       console.log('🟢 [handleGuardar] ÉXITO DEL SERVIDOR:', response.data);
       
-      // 🔄 RECARGAMOS LOS DATOS PARA CONFIRMAR VISUALMENTE EL GUARDADO
-      console.log('🔄 [handleGuardar] Recargando datos desde el servidor...');
       await fetchAllData();
+       if (estadoFinal === 'finalizado') {
+      setReadOnly(true);
+      console.log('🔒 [handleGuardar] Modo solo lectura activado');
+    }
       
-      console.log('⚠️ [handleGuardar] Mostrando Alerta de éxito...');
       Alert.alert(
         '✅ Éxito', 
         estadoFinal === 'finalizado' 
@@ -260,10 +262,11 @@ const InformeEventoScreen = () => {
              style: 'default',
           onPress: () => { 
             console.log('regresando');
-            router.back()
+            router.replace('/admin/EventosCompletos');
          }
     }
-  ]
+  ],
+  { cancelable: false }
 );
       
     } catch (err) {
