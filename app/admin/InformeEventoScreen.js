@@ -211,6 +211,9 @@ const InformeEventoScreen = () => {
     try {
       const token = await getTokenAsync();
       if (!token) throw new Error('Token inválido');
+       console.log(' Egresos reales antes de filtrar:', egresosReales);
+    console.log('📊 Ingresos reales antes de filtrar:', ingresosReales);
+
 
       const payload = {
         segmento_alcanzado_estudiantes: Number(segAlcanzado.estudiantes) || 0,
@@ -228,13 +231,14 @@ const InformeEventoScreen = () => {
         participacion_real: participacionReal,
         indice_satisfaccion_real: satisfaccionReal,
         otros_resultados_real: otrosResultadosReal,
-        egresos_reales: egresosReales.filter(e => e.descripcion || e.total),
-        ingresos_reales: ingresosReales.filter(i => i.descripcion || i.total),
+        egresos_reales: egresosReales.filter(e => e.descripcion || e.cantidad || e.precio_unitario),
+        ingresos_reales: ingresosReales.filter(i => i.descripcion || i.cantidad || i.precio_unitario),
         info_prensa: infoPrensa,
         analisis_desviaciones: analisisDesviaciones,
         lecciones_aprendidas: leccionesAprendidas,
         estado: estadoFinal,
       };
+          console.log('📤 Payload final a enviar:', JSON.stringify(payload, null, 2));
 
       const url = `${API_BASE_URL}/eventos/${eventId}/informe`;
       console.log('🔵 [handleGuardar] Enviando petición a:', url);
