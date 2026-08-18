@@ -252,8 +252,14 @@ const InformeEventoScreen = () => {
       Alert.alert(
         '✅ Éxito', 
         estadoFinal === 'finalizado' ? 'El informe ha sido finalizado y guardado correctamente.' : 'El borrador se ha guardado correctamente.',
-        [{ text: 'Aceptar', style: 'default' }]
-      );
+        [{ text: 'Aceptar', style: 'default',
+          onPress: () => { 
+            console.log('regresando'),
+            router.back(); 
+         }
+    }
+  ]
+);
       
     } catch (err) {
       console.error('🔴 [handleGuardar] ERROR:', err.response?.data || err.message);
