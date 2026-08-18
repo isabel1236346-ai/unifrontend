@@ -349,8 +349,6 @@ const InformeEventoScreen = () => {
       <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
 
         {/* ============================================ */}
-        {/* BLOQUE A: DATOS DEL EVENTO (Solo lectura)    */}
-        {/* ============================================ */}
         <View style={styles.blockHeader}>
           <Ionicons name="information-circle" size={22} color={COLORS.white} />
           <Text style={styles.blockHeaderText}>A. DATOS DEL EVENTO</Text>
@@ -722,12 +720,24 @@ const InformeEventoScreen = () => {
               <Text style={[styles.budgetCell, styles.budgetCellNum]}>Total</Text>
               {!readOnly && <View style={{ width: 24 }} />}
             </View>
-            {egresosReales.map((row, index) => (
+                        {egresosReales.map((row, index) => (
               <View key={index} style={styles.budgetTableRow}>
-                <TextInput style={[styles.budgetCell, styles.budgetCellDesc, styles.inputCell, styles.inputCellDesc]} editable={!readOnly} placeholder="Descripción" value={row.descripcion} onChangeText={(v) => updateRow(setEgresosReales, egresosReales, index, 'descripcion', v)} />
-                <TextInput style={[styles.budgetCell, styles.budgetCellNum, styles.inputCell]} keyboardType="numeric" editable={!readOnly} placeholder="0" value={String(row.cantidad)} onChangeText={(v) => updateRow(setEgresosReales, egresosReales, index, 'cantidad', v)} />
-                <TextInput style={[styles.budgetCell, styles.budgetCellNum, styles.inputCell]} keyboardType="numeric" editable={!readOnly} placeholder="0.00" value={String(row.precio_unitario)} onChangeText={(v) => updateRow(setEgresosReales, egresosReales, index, 'precio_unitario', v)} />
-                <Text style={[styles.budgetCell, styles.budgetCellNum, styles.budgetCellTotal]}>{(row.total || 0).toFixed(2)}</Text>
+                {readOnly ? (
+                  <Text style={[styles.budgetCell, styles.budgetCellDesc]}>{row.descripcion || '-'}</Text>
+                ) : (
+                  <TextInput style={[styles.budgetCell, styles.budgetCellDesc, styles.inputCell, styles.inputCellDesc]} editable={!readOnly} placeholder="Descripción" value={row.descripcion} onChangeText={(v) => updateRow(setEgresosReales, egresosReales, index, 'descripcion', v)} />
+                )}
+                {readOnly ? (
+                  <Text style={[styles.budgetCell, styles.budgetCellNum]}>{row.cantidad || '0'}</Text>
+                ) : (
+                  <TextInput style={[styles.budgetCell, styles.budgetCellNum, styles.inputCell]} keyboardType="numeric" editable={!readOnly} placeholder="0" value={String(row.cantidad)} onChangeText={(v) => updateRow(setEgresosReales, egresosReales, index, 'cantidad', v)} />
+                )}
+                {readOnly ? (
+                  <Text style={[styles.budgetCell, styles.budgetCellNum]}>Bs {parseFloat(row.precio_unitario || 0).toFixed(2)}</Text>
+                ) : (
+                  <TextInput style={[styles.budgetCell, styles.budgetCellNum, styles.inputCell]} keyboardType="numeric" editable={!readOnly} placeholder="0.00" value={String(row.precio_unitario)} onChangeText={(v) => updateRow(setEgresosReales, egresosReales, index, 'precio_unitario', v)} />
+                )}
+                <Text style={[styles.budgetCell, styles.budgetCellNum, styles.budgetCellTotal]}>Bs {(row.total || 0).toFixed(2)}</Text>
                 {!readOnly && <TouchableOpacity onPress={() => removeRow(setEgresosReales, egresosReales, index)} style={{ width: 24, alignItems: 'center' }}><Ionicons name="trash-outline" size={18} color={COLORS.logout} /></TouchableOpacity>}
               </View>
             ))}
@@ -749,12 +759,24 @@ const InformeEventoScreen = () => {
               <Text style={[styles.budgetCell, styles.budgetCellNum]}>Total</Text>
               {!readOnly && <View style={{ width: 24 }} />}
             </View>
-            {ingresosReales.map((row, index) => (
+                        {ingresosReales.map((row, index) => (
               <View key={index} style={styles.budgetTableRow}>
-                <TextInput style={[styles.budgetCell, styles.budgetCellDesc, styles.inputCell, styles.inputCellDesc]} editable={!readOnly} placeholder="Descripción" value={row.descripcion} onChangeText={(v) => updateRow(setIngresosReales, ingresosReales, index, 'descripcion', v)} />
-                <TextInput style={[styles.budgetCell, styles.budgetCellNum, styles.inputCell]} keyboardType="numeric" editable={!readOnly} placeholder="0" value={String(row.cantidad)} onChangeText={(v) => updateRow(setIngresosReales, ingresosReales, index, 'cantidad', v)} />
-                <TextInput style={[styles.budgetCell, styles.budgetCellNum, styles.inputCell]} keyboardType="numeric" editable={!readOnly} placeholder="0.00" value={String(row.precio_unitario)} onChangeText={(v) => updateRow(setIngresosReales, ingresosReales, index, 'precio_unitario', v)} />
-                <Text style={[styles.budgetCell, styles.budgetCellNum, styles.budgetCellTotal]}>{(row.total || 0).toFixed(2)}</Text>
+                {readOnly ? (
+                  <Text style={[styles.budgetCell, styles.budgetCellDesc]}>{row.descripcion || '-'}</Text>
+                ) : (
+                  <TextInput style={[styles.budgetCell, styles.budgetCellDesc, styles.inputCell, styles.inputCellDesc]} editable={!readOnly} placeholder="Descripción" value={row.descripcion} onChangeText={(v) => updateRow(setIngresosReales, ingresosReales, index, 'descripcion', v)} />
+                )}
+                {readOnly ? (
+                  <Text style={[styles.budgetCell, styles.budgetCellNum]}>{row.cantidad || '0'}</Text>
+                ) : (
+                  <TextInput style={[styles.budgetCell, styles.budgetCellNum, styles.inputCell]} keyboardType="numeric" editable={!readOnly} placeholder="0" value={String(row.cantidad)} onChangeText={(v) => updateRow(setIngresosReales, ingresosReales, index, 'cantidad', v)} />
+                )}
+                {readOnly ? (
+                  <Text style={[styles.budgetCell, styles.budgetCellNum]}>Bs {parseFloat(row.precio_unitario || 0).toFixed(2)}</Text>
+                ) : (
+                  <TextInput style={[styles.budgetCell, styles.budgetCellNum, styles.inputCell]} keyboardType="numeric" editable={!readOnly} placeholder="0.00" value={String(row.precio_unitario)} onChangeText={(v) => updateRow(setIngresosReales, ingresosReales, index, 'precio_unitario', v)} />
+                )}
+                <Text style={[styles.budgetCell, styles.budgetCellNum, styles.budgetCellTotal]}>Bs {(row.total || 0).toFixed(2)}</Text>
                 {!readOnly && <TouchableOpacity onPress={() => removeRow(setIngresosReales, ingresosReales, index)} style={{ width: 24, alignItems: 'center' }}><Ionicons name="trash-outline" size={18} color={COLORS.logout} /></TouchableOpacity>}
               </View>
             ))}
@@ -772,30 +794,72 @@ const InformeEventoScreen = () => {
           </View>
         </View>
 
-        {/* Nota de Prensa */}
+              {/* Nota de Prensa */}
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>5. Información para la Nota de Prensa</Text>
           <View style={styles.detailRow}>
             <Ionicons name="newspaper-outline" size={20} color={COLORS.primary} style={styles.detailIcon} />
-            <TextInput style={[styles.textInput, { flex: 1, minHeight: 90, textAlignVertical: 'top', marginBottom: 0 }]} editable={!readOnly} multiline numberOfLines={4} value={infoPrensa} onChangeText={setInfoPrensa} placeholder="¿Qué se hizo, quiénes, por qué/para qué, cuándo, dónde?" />
+            {readOnly ? (
+              <Text style={[styles.textInput, { flex: 1, minHeight: 90, textAlignVertical: 'top', marginBottom: 0, backgroundColor: 'transparent', borderWidth: 0, color: COLORS.darkText }]}>
+                {infoPrensa || 'Sin información'}
+              </Text>
+            ) : (
+              <TextInput 
+                style={[styles.textInput, { flex: 1, minHeight: 90, textAlignVertical: 'top', marginBottom: 0 }]} 
+                editable={!readOnly} 
+                multiline 
+                numberOfLines={4} 
+                value={infoPrensa} 
+                onChangeText={setInfoPrensa} 
+                placeholder="¿Qué se hizo, quiénes, por qué/para qué, cuándo, dónde?" 
+              />
+            )}
           </View>
         </View>
 
-        {/* Análisis de Desviaciones */}
+                {/* Análisis de Desviaciones */}
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>6. Análisis de Desviaciones Críticas/Significativas</Text>
           <View style={styles.detailRow}>
             <Ionicons name="git-compare-outline" size={20} color={COLORS.primary} style={styles.detailIcon} />
-            <TextInput style={[styles.textInput, { flex: 1, minHeight: 90, textAlignVertical: 'top', marginBottom: 0 }]} editable={!readOnly} multiline numberOfLines={4} value={analisisDesviaciones} onChangeText={setAnalisisDesviaciones} placeholder="Análisis de causas de las desviaciones detectadas" />
+            {readOnly ? (
+              <Text style={[styles.textInput, { flex: 1, minHeight: 90, textAlignVertical: 'top', marginBottom: 0, backgroundColor: 'transparent', borderWidth: 0, color: COLORS.darkText }]}>
+                {analisisDesviaciones || 'Sin análisis'}
+              </Text>
+            ) : (
+              <TextInput 
+                style={[styles.textInput, { flex: 1, minHeight: 90, textAlignVertical: 'top', marginBottom: 0 }]} 
+                editable={!readOnly} 
+                multiline 
+                numberOfLines={4} 
+                value={analisisDesviaciones} 
+                onChangeText={setAnalisisDesviaciones} 
+                placeholder="Análisis de causas de las desviaciones detectadas" 
+              />
+            )}
           </View>
         </View>
 
-        {/* Lecciones Aprendidas */}
+                {/* Lecciones Aprendidas */}
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>7. Lecciones Aprendidas</Text>
           <View style={styles.detailRow}>
             <Ionicons name="bulb-outline" size={20} color={COLORS.primary} style={styles.detailIcon} />
-            <TextInput style={[styles.textInput, { flex: 1, minHeight: 90, textAlignVertical: 'top', marginBottom: 0 }]} editable={!readOnly} multiline numberOfLines={4} value={leccionesAprendidas} onChangeText={setLeccionesAprendidas} placeholder="Lecciones aprendidas del evento" />
+            {readOnly ? (
+              <Text style={[styles.textInput, { flex: 1, minHeight: 90, textAlignVertical: 'top', marginBottom: 0, backgroundColor: 'transparent', borderWidth: 0, color: COLORS.darkText }]}>
+                {leccionesAprendidas || 'Sin lecciones registradas'}
+              </Text>
+            ) : (
+              <TextInput 
+                style={[styles.textInput, { flex: 1, minHeight: 90, textAlignVertical: 'top', marginBottom: 0 }]} 
+                editable={!readOnly} 
+                multiline 
+                numberOfLines={4} 
+                value={leccionesAprendidas} 
+                onChangeText={setLeccionesAprendidas} 
+                placeholder="Lecciones aprendidas del evento" 
+              />
+            )}
           </View>
         </View>
 
