@@ -20,7 +20,8 @@ import * as SecureStore from 'expo-secure-store';
 
 const { width } = Dimensions.get('window');
 
-const API_BASE_URL = 'https://unibackend-production.up.railway.app';const TOKEN_KEY = 'adminAuthToken';
+const API_BASE_URL = 'https://unibackend-production.up.railway.app';
+const TOKEN_KEY = 'adminAuthToken';
 
 const COLORS = {
   primary: '#E95A0C',
@@ -58,27 +59,45 @@ const deleteTokenAsync = async () => {
   }
 };
 
+// ✅ PARSEO DE FECHA MEJORADO E INFALIBLE
 const parseEventDate = (dateStr) => {
   if (!dateStr) return new Date(0);
   if (dateStr instanceof Date) return dateStr;
   
-  if (typeof dateStr === 'string' && dateStr.includes('-')) {
+  if (typeof dateStr === 'string') {
+    const cleanStr = dateStr.trim();
+    const parts = cleanStr.split(/[-/]/); // Divide por '-' o '/'
+    
+    if (parts.length === 3) {
+      const [p1, p2, p3] = parts.map(Number);
+      if (!isNaN(p1) && !isNaN(p2) && !isNaN(p3)) {
+        // Formato YYYY-MM-DD o YYYY/MM/DD
+        if (p1 > 31) {
+          return new Date(p1, p2 - 1, p3);
+        }
+        // Formato DD/MM/YYYY
+        if (p3 > 31) {
+          return new Date(p3, p2 - 1, p1);
+        }
+      }
+    }
+    
+    // Fallback al parser nativo (maneja ISO strings como "2023-10-25T15:30:00Z")
+    const parsed = new Date(cleanStr);
+    if (!isNaN(parsed.getTime())) return parsed;
+  }
+  
+  if (typeof dateStr === 'number') {
     const parsed = new Date(dateStr);
     if (!isNaN(parsed.getTime())) return parsed;
   }
   
-  if (typeof dateStr === 'string' && dateStr.includes('/')) {
-    const parts = dateStr.split('/');
-    if (parts.length === 3) {
-      const [day, month, year] = parts.map(Number);
-      if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
-        return new Date(year, month - 1, day);
-      }
-    }
-  }
-  
-  const fallback = new Date(dateStr);
-  return isNaN(fallback.getTime()) ? new Date(0) : fallback;
+  return new Date(0);
+};
+
+// ✅ HELPER PARA OBTENER LA FECHA SIN IMPORTAR EL NOMBRE DEL CAMPO EN EL BACKEND
+const getEventDateStr = (event) => {
+  return event.date || event.fecha || event.fecha_inicio || event.fechaEvento || '';
 };
 
 const formatSubmittedDate = (date) => {
@@ -99,6 +118,7 @@ const isEventPast = (dateStr) => {
   today.setHours(0, 0, 0, 0);
   return eventDate < today;
 };
+
 const isEventToday = (dateStr) => {
   if (!dateStr) return false;
   const eventDate = parseEventDate(dateStr);
@@ -108,7 +128,6 @@ const isEventToday = (dateStr) => {
   return eventDate.getTime() === today.getTime();
 };
 
-// ✅ FUNCIÓN DINÁMICA DEL BADGE
 const getMonthBadge = (dateStr) => {
   const eventDate = parseEventDate(dateStr);
   const now = new Date();
@@ -123,15 +142,16 @@ const getMonthBadge = (dateStr) => {
     return { text: 'Del mes próximo', color: COLORS.blue };
   } else {
     const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-    return { text: monthNames[eventMonth], color: COLORS.primary };
+    return { text: monthNames[eventMonth] || 'Mes', color: COLORS.primary };
   }
 };
 
 const groupEventsByStatusAndFaculty = (events) => {
   const eventosFase2 = events.filter(e => e.idfase === 2 || String(e.idfase) === '2');
   
-  const activos = eventosFase2.filter(e => isEventToday(e.date));
-  const pasados = eventosFase2.filter(e => isEventPast(e.date));
+  // ✅ Usamos el helper getEventDateStr para garantizar que leemos la fecha
+  const activos = eventosFase2.filter(e => isEventToday(getEventDateStr(e)));
+  const pasados = eventosFase2.filter(e => isEventPast(getEventDateStr(e)));
   
   const sections = [];
   
@@ -169,7 +189,7 @@ const groupEventsByStatusAndFaculty = (events) => {
     sections.push({
       title: '🏆 Eventos Completados (Fase 2)',
       type: 'pasados',
-      isPastSection: false,
+      isPastSection: true,
       data: Object.keys(groupedPasados).sort().flatMap(faculty => 
         groupedPasados[faculty].map(event => ({ ...event, _facultyGroup: faculty }))
       ),
@@ -216,10 +236,16 @@ const EventosCompletados = () => {
         },
       });
 
+      // ✅ LOGS DE DEPURACIÓN: Revisa la consola para ver si el backend envía los eventos pasados
+      console.log('✅ Total de eventos recibidos:', response.data.length);
+      if (response.data.length > 0) {
+        console.log('🔍 Ejemplo de estructura del primer evento:', response.data[0]);
+      }
+
       setEvents(response.data);
 
     } catch (error) {
-      console.error('❌ Error:', error);
+      console.error('❌ Error al cargar eventos:', error);
       
       if (error.response?.status === 401 || error.response?.status === 403) {
         await deleteTokenAsync();
@@ -257,9 +283,9 @@ const EventosCompletados = () => {
       return null;
     }
 
+    const dateStr = getEventDateStr(item);
     const facultyColor = getFacultyColor(item._facultyGroup || item.faculty || 'Sin facultad');
-    // ✅ Badge dinámico usando la función
-    const badge = getMonthBadge(item.date);
+    const badge = getMonthBadge(dateStr);
     
     return (
       <TouchableOpacity
@@ -267,26 +293,19 @@ const EventosCompletados = () => {
         onPress={() => handleEventPress(item)} 
         activeOpacity={0.8}
       >
-        <View style={[
-          styles.facultyBar,
-          { backgroundColor: facultyColor } 
-        ]} />
+        <View style={[styles.facultyBar, { backgroundColor: facultyColor }]} />
         
         <View style={styles.cardContent}>
           <View style={styles.eventHeader}>
             <View style={styles.titleRow}>
-              <Text 
-                style={styles.eventTitle}
-                numberOfLines={2}
-              >
-                {item.title}
+              <Text style={styles.eventTitle} numberOfLines={2}>
+                {item.title || 'Sin título'}
               </Text>
               <View style={styles.idBadge}>
                 <Text style={styles.idText}>#{item.id}</Text>
               </View>
             </View>
             
-            {/* ✅ Badge dinámico integrado correctamente */}
             <View style={styles.badgeContainer}>
               <View style={[styles.monthBadge, { backgroundColor: badge.color }]}>
                 <Ionicons name="calendar" size={12} color={COLORS.white} />
@@ -298,22 +317,22 @@ const EventosCompletados = () => {
           <View style={styles.infoGrid}>
             <View style={styles.infoRow}>
               <Ionicons name="calendar-outline" size={14} color={COLORS.grayText} />
-              <Text style={styles.infoText}>{item.date}</Text>
+              <Text style={styles.infoText}>{dateStr || 'Sin fecha'}</Text>
             </View>
             <View style={styles.infoRow}>
               <Ionicons name="time-outline" size={14} color={COLORS.grayText} />
-              <Text style={styles.infoText}>{item.time}</Text>
+              <Text style={styles.infoText}>{item.time || 'Sin hora'}</Text>
             </View>
           </View>
 
           <View style={styles.infoGrid}>
             <View style={styles.infoRow}>
               <Ionicons name="location-outline" size={14} color={COLORS.grayText} />
-              <Text style={styles.infoText} numberOfLines={1}>{item.location}</Text>
+              <Text style={styles.infoText} numberOfLines={1}>{item.location || 'Sin ubicación'}</Text>
             </View>
             <View style={styles.infoRow}>
               <Ionicons name="person-outline" size={14} color={COLORS.grayText} />
-              <Text style={styles.infoText} numberOfLines={1}>{item.organizer}</Text>
+              <Text style={styles.infoText} numberOfLines={1}>{item.organizer || 'Sin organizador'}</Text>
             </View>
           </View>
 
@@ -323,9 +342,9 @@ const EventosCompletados = () => {
               <Text style={styles.phaseText}>Fase {item.idfase || 1}</Text>
             </View>
             <View style={styles.submissionInfo}>
-              <Text style={styles.submittedBy}>{item.submittedBy}</Text>
+              <Text style={styles.submittedBy}>{item.submittedBy || 'Desconocido'}</Text>
               <Text style={styles.submittedDate}>
-                {formatSubmittedDate(item.submittedDate)}
+                {formatSubmittedDate(item.submittedDate || new Date())}
               </Text>
             </View>
           </View>
@@ -334,9 +353,7 @@ const EventosCompletados = () => {
             style={styles.viewDetailsButton}
             onPress={() => handleEventPress(item)}
           >
-            <Text style={styles.viewDetailsText}>
-              Ver detalles
-            </Text>
+            <Text style={styles.viewDetailsText}>Ver detalles</Text>
             <Ionicons name="chevron-forward" size={18} color={COLORS.primary} />
           </TouchableOpacity>
         </View>
@@ -345,32 +362,13 @@ const EventosCompletados = () => {
   };
 
   const renderSectionHeader = ({ section }) => {
-    if (section.type === 'activos' || section.type === 'pasados') {
-      return (
-        <View style={styles.sectionHeader}>
-          <View style={styles.sectionHeaderContent}>
-            <View style={[
-              styles.facultyDot, 
-              { backgroundColor: COLORS.primary }
-            ]} />
-            <Text style={styles.sectionTitle}>
-              {section.title}
-            </Text>
-            <View style={styles.countBadge}>
-              <Text style={styles.countText}>{section.data.length}</Text>
-            </View>
-          </View>
-        </View>
-      );
-    }
-    
     return (
       <View style={styles.sectionHeader}>
         <View style={styles.sectionHeaderContent}>
           <View style={[styles.facultyDot, { backgroundColor: COLORS.primary }]} />
           <Text style={styles.sectionTitle}>{section.title}</Text>
           <View style={styles.countBadge}>
-            <Text style={styles.countText}>{section.count}</Text>
+            <Text style={styles.countText}>{section.data.length}</Text>
           </View>
         </View>
       </View>
@@ -388,15 +386,17 @@ const EventosCompletados = () => {
 
   const eventosFase2 = events.filter(e => e.idfase === 2 || String(e.idfase) === '2');
   const sections = groupEventsByStatusAndFaculty(events);
-  const finalizedCount = eventosFase2.filter(e => isEventPast(e.date)).length;
+  
+  // ✅ Usamos el helper aquí también para cálculos precisos
+  const finalizedCount = eventosFase2.filter(e => isEventPast(getEventDateStr(e))).length;
   const uniqueFaculties = new Set(eventosFase2.map(e => e.faculty || 'Sin facultad')).size;
   const totalFase2 = eventosFase2.length;
-const eventosFuturos = eventosFase2.filter(e => !isEventToday(e.date) && !isEventPast(e.date));
+  const eventosFuturos = eventosFase2.filter(e => !isEventToday(getEventDateStr(e)) && !isEventPast(getEventDateStr(e)));
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
       
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={COLORS.white} />
@@ -422,7 +422,6 @@ const eventosFuturos = eventosFase2.filter(e => !isEventToday(e.date) && !isEven
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Stats Cards Superiores */}
         {totalFase2 > 0 && (
           <View style={styles.topStatsContainer}>
             <View style={[styles.topStatCard, { backgroundColor: COLORS.primary }]}>
@@ -439,7 +438,6 @@ const eventosFuturos = eventosFase2.filter(e => !isEventToday(e.date) && !isEven
           </View>
         )}
 
-        {/* Lista de eventos */}
         <SectionList
           sections={sections}
           keyExtractor={(item) => `event-${item.id}`}
@@ -459,20 +457,17 @@ const eventosFuturos = eventosFase2.filter(e => !isEventToday(e.date) && !isEven
                 />
               </View>
               <Text style={styles.emptyTitle}>
-                {totalFase2 === 0 
-                  ? 'No hay eventos de Fase 2' 
-                  : 'Ningún evento disponible aún'}
+                {totalFase2 === 0 ? 'No hay eventos de Fase 2' : 'Ningún evento completado aún'}
               </Text>
               <Text style={styles.emptyText}>
                 {totalFase2 === 0 
                   ? 'No se encontraron eventos de Fase 2 organizados por facultad'
-                  : `Tienes ${eventosFuturos.length} evento${eventosFuturos.length !== 1 ? 's' : ''} de Fase 2 programado${eventosFuturos.length !== 1 ? 's' : ''}, pero aún ${eventosFuturos.length !== 1 ? 'no llegan' : 'no llega'} a su fecha. Aparecerán aquí el día del evento.`}
+                  : `Tienes ${eventosFuturos.length} evento${eventosFuturos.length !== 1 ? 's' : ''} de Fase 2 programado${eventosFuturos.length !== 1 ? 's' : ''}, pero aún ${eventosFuturos.length !== 1 ? 'no llegan' : 'no llega'} a su fecha (o no se recibieron eventos pasados desde el backend).`}
               </Text>
             </View>
           }
         />
 
-        {/* Stats Cards Inferiores */}
         {totalFase2 > 0 && (
           <View style={styles.bottomStatsContainer}>
             <View style={[styles.bottomStatCard, { backgroundColor: COLORS.primary }]}>
@@ -499,361 +494,63 @@ const eventosFuturos = eventosFase2.filter(e => !isEventToday(e.date) && !isEven
   );
 };
 
+// ... (El objeto `styles` se mantiene exactamente igual que en tu código original)
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: COLORS.grayText,
-    fontWeight: '500',
-  },
+  container: { flex: 1, backgroundColor: COLORS.background },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.background },
+  loadingText: { marginTop: 16, fontSize: 16, color: COLORS.grayText, fontWeight: '500' },
   header: {
-    backgroundColor: COLORS.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: Platform.OS === 'ios' ? 50 : 16,
-    paddingBottom: 16,
-    paddingHorizontal: 16,
-    ...Platform.select({
-      ios: {
-        shadowColor: COLORS.cardShadow,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.15,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
+    backgroundColor: COLORS.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingTop: Platform.OS === 'ios' ? 50 : 16, paddingBottom: 16, paddingHorizontal: 16,
+    ...Platform.select({ ios: { shadowColor: COLORS.cardShadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 8 }, android: { elevation: 4 } }),
   },
-  backButton: {
-    padding: 8,
-    marginRight: 8,
-  },
-  headerTextContainer: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: COLORS.white,
-  },
-  headerSubtitle: {
-    fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.8)',
-    marginTop: 2,
-  },
-  refreshButton: {
-    padding: 8,
-    marginLeft: 8,
-  },
-  rotating: {
-    transform: [{ rotate: '180deg' }],
-  },
-  topStatsContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    gap: 12,
-  },
-  topStatCard: {
-    flex: 1,
-    borderRadius: 16,
-    padding: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...Platform.select({
-      ios: {
-        shadowColor: COLORS.cardShadow,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 3,
-      },
-    }),
-  },
-  topStatNumber: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: COLORS.white,
-    marginTop: 8,
-  },
-  topStatLabel: {
-    fontSize: 12,
-    color: COLORS.white,
-    marginTop: 4,
-    fontWeight: '600',
-    opacity: 0.9,
-  },
-  bottomStatsContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    gap: 12,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    backgroundColor: COLORS.white,
-  },
-  bottomStatCard: {
-    flex: 1,
-    borderRadius: 12,
-    padding: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...Platform.select({
-      ios: {
-        shadowColor: COLORS.cardShadow,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
-  },
-  bottomStatNumber: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: COLORS.white,
-    marginTop: 4,
-  },
-  bottomStatLabel: {
-    fontSize: 10,
-    color: COLORS.white,
-    marginTop: 2,
-    fontWeight: '500',
-    opacity: 0.9,
-  },
-  sectionHeader: {
-    backgroundColor: COLORS.background,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginBottom: 8,
-  },
-  sectionHeaderContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.white,
-    padding: 12,
-    borderRadius: 12,
-    ...Platform.select({
-      ios: {
-        shadowColor: COLORS.cardShadow,
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.08,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
-  },
-  facultyDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: 12,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.darkText,
-    flex: 1,
-  },
-  countBadge: {
-    backgroundColor: COLORS.background,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  countText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: COLORS.primary,
-  },
-  listContent: {
-    paddingBottom: 20,
-    paddingHorizontal: 16,
-  },
-  eventCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: 16,
-    marginBottom: 12,
-    overflow: 'hidden',
-    flexDirection: 'row',
-    ...Platform.select({
-      ios: {
-        shadowColor: COLORS.cardShadow,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
-  },
-  facultyBar: {
-    width: 6,
-  },
-  cardContent: {
-    flex: 1,
-    padding: 16,
-  },
-  eventHeader: {
-    marginBottom: 12,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  eventTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.darkText,
-    flex: 1,
-    marginRight: 8,
-  },
-  idBadge: {
-    backgroundColor: COLORS.background,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  idText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: COLORS.primary,
-  },
-  badgeContainer: {
-    marginTop: 4,
-  },
-  monthBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
-    gap: 4,
-  },
-  monthBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: COLORS.white,
-  },
-  infoGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-    gap: 12,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    gap: 6,
-  },
-  infoText: {
-    fontSize: 12,
-    color: COLORS.grayText,
-    fontWeight: '500',
-    flex: 1,
-  },
-  phaseContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    marginBottom: 12,
-  },
-  phaseBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-    gap: 4,
-  },
-  phaseText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: COLORS.primary,
-  },
-  submissionInfo: {
-    alignItems: 'flex-end',
-  },
-  submittedBy: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: COLORS.grayText,
-  },
-  submittedDate: {
-    fontSize: 10,
-    color: COLORS.grayMedium,
-    marginTop: 2,
-  },
-  viewDetailsButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-  },
-  viewDetailsText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.primary,
-    marginRight: 4,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 80,
-    paddingHorizontal: 32,
-  },
-  emptyIconContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: COLORS.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  emptyTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: COLORS.darkText,
-    marginBottom: 8,
-  },
-  emptyText: {
-    fontSize: 15,
-    color: COLORS.grayText,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
+  backButton: { padding: 8, marginRight: 8 },
+  headerTextContainer: { flex: 1 },
+  headerTitle: { fontSize: 20, fontWeight: 'bold', color: COLORS.white },
+  headerSubtitle: { fontSize: 13, color: 'rgba(255, 255, 255, 0.8)', marginTop: 2 },
+  refreshButton: { padding: 8, marginLeft: 8 },
+  rotating: { transform: [{ rotate: '180deg' }] },
+  topStatsContainer: { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 16, gap: 12 },
+  topStatCard: { flex: 1, borderRadius: 16, padding: 20, alignItems: 'center', justifyContent: 'center', ...Platform.select({ ios: { shadowColor: COLORS.cardShadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8 }, android: { elevation: 3 } }) },
+  topStatNumber: { fontSize: 28, fontWeight: 'bold', color: COLORS.white, marginTop: 8 },
+  topStatLabel: { fontSize: 12, color: COLORS.white, marginTop: 4, fontWeight: '600', opacity: 0.9 },
+  bottomStatsContainer: { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 16, gap: 12, borderTopWidth: 1, borderTopColor: COLORS.border, backgroundColor: COLORS.white },
+  bottomStatCard: { flex: 1, borderRadius: 12, padding: 12, alignItems: 'center', justifyContent: 'center', ...Platform.select({ ios: { shadowColor: COLORS.cardShadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4 }, android: { elevation: 2 } }) },
+  bottomStatNumber: { fontSize: 24, fontWeight: 'bold', color: COLORS.white, marginTop: 4 },
+  bottomStatLabel: { fontSize: 10, color: COLORS.white, marginTop: 2, fontWeight: '500', opacity: 0.9 },
+  sectionHeader: { backgroundColor: COLORS.background, paddingVertical: 12, paddingHorizontal: 16, marginBottom: 8 },
+  sectionHeaderContent: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.white, padding: 12, borderRadius: 12, ...Platform.select({ ios: { shadowColor: COLORS.cardShadow, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 4 }, android: { elevation: 2 } }) },
+  facultyDot: { width: 12, height: 12, borderRadius: 6, marginRight: 12 },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: COLORS.darkText, flex: 1 },
+  countBadge: { backgroundColor: COLORS.background, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  countText: { fontSize: 13, fontWeight: '700', color: COLORS.primary },
+  listContent: { paddingBottom: 20, paddingHorizontal: 16 },
+  eventCard: { backgroundColor: COLORS.white, borderRadius: 16, marginBottom: 12, overflow: 'hidden', flexDirection: 'row', ...Platform.select({ ios: { shadowColor: COLORS.cardShadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8 }, android: { elevation: 2 } }) },
+  facultyBar: { width: 6 },
+  cardContent: { flex: 1, padding: 16 },
+  eventHeader: { marginBottom: 12 },
+  titleRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8 },
+  eventTitle: { fontSize: 16, fontWeight: '700', color: COLORS.darkText, flex: 1, marginRight: 8 },
+  idBadge: { backgroundColor: COLORS.background, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  idText: { fontSize: 11, fontWeight: '700', color: COLORS.primary },
+  badgeContainer: { marginTop: 4 },
+  monthBadge: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, gap: 4 },
+  monthBadgeText: { fontSize: 11, fontWeight: '600', color: COLORS.white },
+  infoGrid: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, gap: 12 },
+  infoRow: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 6 },
+  infoText: { fontSize: 12, color: COLORS.grayText, fontWeight: '500', flex: 1 },
+  phaseContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, borderTopWidth: 1, borderTopColor: COLORS.border, marginBottom: 12 },
+  phaseBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.background, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, gap: 4 },
+  phaseText: { fontSize: 11, fontWeight: '600', color: COLORS.primary },
+  submissionInfo: { alignItems: 'flex-end' },
+  submittedBy: { fontSize: 11, fontWeight: '500', color: COLORS.grayText },
+  submittedDate: { fontSize: 10, color: COLORS.grayMedium, marginTop: 2 },
+  viewDetailsButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, paddingTop: 12, borderTopWidth: 1, borderTopColor: COLORS.border },
+  viewDetailsText: { fontSize: 14, fontWeight: '600', color: COLORS.primary, marginRight: 4 },
+  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 80, paddingHorizontal: 32 },
+  emptyIconContainer: { width: 120, height: 120, borderRadius: 60, backgroundColor: COLORS.background, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
+  emptyTitle: { fontSize: 22, fontWeight: 'bold', color: COLORS.darkText, marginBottom: 8 },
+  emptyText: { fontSize: 15, color: COLORS.grayText, textAlign: 'center', lineHeight: 22 },
 });
 
 export default EventosCompletados;
