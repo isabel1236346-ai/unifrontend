@@ -214,7 +214,7 @@ const confirmarInscripcion = async () => {
     const token = await getToken();
 
     // 1. Actualizar los datos del estudiante (endpoint nuevo, sin restricción de admin)
-    await axios.put(`${API_BASE_URL}/estudiantes/mis-datos-inscripcion`, {
+    await axios.put(`${API_BASE_URL}/estudiante/mis-datos-inscripcion`, {
       codigoestudiante: codigo_estudiante, semestre, telefono,
     }, {
       headers: { Authorization: `Bearer ${token}` },
@@ -355,10 +355,6 @@ const confirmarInscripcion = async () => {
 const fetchMisInscripciones = useCallback(async () => {
   try {
     const token = await getToken();
-     if (!token) {
-      console.warn('No hay token disponible');
-      return;
-    }
     const res = await axios.get(`${API_BASE_URL}/estudiantes/mis-inscripciones`, {
       headers: { Authorization: `Bearer ${token}` },
     });
