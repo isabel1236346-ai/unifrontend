@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Alert,
-  StatusBar, ScrollView, ActivityIndicator, Platform,
+  StatusBar, ScrollView, ActivityIndicator, Platform,Modal, TextInput
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -187,18 +187,52 @@ const HomeEstudianteScreen = () => {
   const [error, setError]         = useState(null);
   const [stats, setStats]         = useState({ total: 0, proximos: 0, completados: 0 });
   const [inscritos, setInscritos] = useState(new Set());
-  const handleInscribir = async (eventId) => {
+  const [showInscripcionModal, setShowInscripcionModal] = useState(false);
+  const [eventoPendiente, setEventoPendiente] = useState(null);
+  const [formInscripcion, setFormInscripcion] = useState({ codigo_estudiante: '', semestre: '', telefono: '' });
+  const [savingInscripcion, setSavingInscripcion] = useState(false);
+
+  const handleInscribir = (eventId) => {
+  setEventoPendiente(eventId);
+  setFormInscripcion({
+    codigo_estudiante: userData?.codigo_estudiante || '',
+    semestre: userData?.semestre || '',
+    telefono: userData?.telefono || '',
+  });
+  setShowInscripcionModal(true);
+};
+
+const confirmarInscripcion = async () => {
+  const { codigo_estudiante, semestre, telefono } = formInscripcion;
+  if (!codigo_estudiante || !semestre || !telefono) {
+    Alert.alert('Faltan datos', 'Completá código de estudiante, semestre y teléfono.');
+    return;
+  }
+
+  setSavingInscripcion(true);
   try {
     const token = await getToken();
-    await axios.post(`${API_BASE_URL}/eventos/${eventId}/registrar`, {}, {
+
+    // 1. Actualizar los datos del estudiante (endpoint nuevo, sin restricción de admin)
+    await axios.put(`${API_BASE_URL}/estudiantes/mis-datos-inscripcion`, {
+      codigoestudiante: codigo_estudiante, semestre, telefono,
+    }, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    setInscritos(prev => new Set(prev).add(eventId));
+
+    // 2. Inscribirlo al evento
+    await axios.post(`${API_BASE_URL}/eventos/${eventoPendiente}/registrar`, {}, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    setInscritos(prev => new Set(prev).add(eventoPendiente));
+    setShowInscripcionModal(false);
     Alert.alert('✅ Inscrito', 'Te has registrado exitosamente al evento.');
   } catch (err) {
     console.error('Error al inscribirse:', err);
-    const msg = err.response?.data?.message || 'No se pudo completar la inscripción.';
-    Alert.alert('Error', msg);
+    Alert.alert('Error', err.response?.data?.message || 'No se pudo completar la inscripción.');
+  } finally {
+    setSavingInscripcion(false);
   }
 };
   useEffect(() => {
@@ -455,6 +489,48 @@ const fetchUserProfile = useCallback(async () => {
           <Text style={styles.logoutText}>Cerrar Sesión</Text>
         </TouchableOpacity>
       </View>
+      <Modal visible={showInscripcionModal} animationType="slide" transparent onRequestClose={() => setShowInscripcionModal(false)}>
+  <View style={modalStyles.overlay}>
+    <View style={modalStyles.card}>
+      <Text style={modalStyles.title}>Completá tus datos</Text>
+      <Text style={modalStyles.subtitle}>Necesitamos esta información antes de inscribirte</Text>
+
+      <Text style={modalStyles.label}>Código de estudiante</Text>
+      <TextInput
+        style={modalStyles.input}
+        value={formInscripcion.codigo_estudiante}
+        onChangeText={(v) => setFormInscripcion(prev => ({ ...prev, codigo_estudiante: v }))}
+        placeholder="Ej: 2023-1234"
+      />
+
+      <Text style={modalStyles.label}>Semestre</Text>
+      <TextInput
+        style={modalStyles.input}
+        value={formInscripcion.semestre}
+        onChangeText={(v) => setFormInscripcion(prev => ({ ...prev, semestre: v }))}
+        placeholder="Ej: 5to semestre"
+      />
+
+      <Text style={modalStyles.label}>Teléfono</Text>
+      <TextInput
+        style={modalStyles.input}
+        value={formInscripcion.telefono}
+        onChangeText={(v) => setFormInscripcion(prev => ({ ...prev, telefono: v }))}
+        placeholder="Ej: 71234567"
+        keyboardType="phone-pad"
+      />
+
+      <View style={modalStyles.buttonRow}>
+        <TouchableOpacity style={modalStyles.cancelBtn} onPress={() => setShowInscripcionModal(false)} disabled={savingInscripcion}>
+          <Text style={modalStyles.cancelBtnText}>Cancelar</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={modalStyles.confirmBtn} onPress={confirmarInscripcion} disabled={savingInscripcion}>
+          {savingInscripcion ? <ActivityIndicator color={COLORS.white} /> : <Text style={modalStyles.confirmBtnText}>Confirmar Inscripción</Text>}
+        </TouchableOpacity>
+      </View>
+    </View>
+  </View>
+</Modal>
     </View>
   );
 };
@@ -589,6 +665,20 @@ inscribirBtnText: { color: COLORS.white, fontSize: 11, fontWeight: '600' },
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.12, shadowRadius: 4, elevation: 3,
   },
   logoutText: { color: COLORS.white, fontSize: 15, fontWeight: '600', marginLeft: 8 },
+ 
+});
+const modalStyles = StyleSheet.create({
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
+  card: { backgroundColor: COLORS.white, borderRadius: 16, padding: 20 },
+  title: { fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 4 },
+  subtitle: { fontSize: 13, color: COLORS.textSecondary, marginBottom: 16 },
+  label: { fontSize: 13, fontWeight: '600', color: COLORS.textPrimary, marginBottom: 6, marginTop: 10 },
+  input: { borderWidth: 1, borderColor: COLORS.border, borderRadius: 10, padding: 12, fontSize: 14, color: COLORS.textPrimary },
+  buttonRow: { flexDirection: 'row', gap: 10, marginTop: 20 },
+  cancelBtn: { flex: 1, borderWidth: 1, borderColor: COLORS.border, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
+  cancelBtnText: { color: COLORS.textSecondary, fontWeight: '600' },
+  confirmBtn: { flex: 1, backgroundColor: COLORS.success, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
+  confirmBtnText: { color: COLORS.white, fontWeight: '600' },
 });
 
 export default HomeEstudianteScreen;
