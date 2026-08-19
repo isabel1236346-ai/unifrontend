@@ -455,7 +455,7 @@ const fetchUserProfile = useCallback(async () => {
         <View style={styles.section}>
           <View style={styles.sectionHead}>
             <Text style={styles.sectionTitle}>Eventos de tu Facultad</Text>
-            <TouchableOpacity onPress={() => router.push('/estudiantes/eventos')}>
+            <TouchableOpacity onPress={() => router.push('/estudiante/eventos')}>
               <Text style={styles.seeAll}>Ver todos</Text>
             </TouchableOpacity>
           </View>
@@ -487,7 +487,7 @@ const fetchUserProfile = useCallback(async () => {
                 <EventCard
                   key={ev.id?.toString()}
                   event={ev}
-                  onPress={() => router.push(`/estudiantes/eventos/${ev.id}`)}
+                  onPress={() => router.push(`/estudiante/eventos/${ev.id}`)}
                   onInscribir={handleInscribir}
                   yaInscrito={inscritos.has(ev.id)}
                 />
@@ -499,9 +499,9 @@ const fetchUserProfile = useCallback(async () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Acciones Rápidas</Text>
           <View style={{ gap: 10, marginTop: 10 }}>
-            <ActionCard title="Mis Eventos"  description="Ver eventos inscritos"  icon="calendar-outline"    color={COLORS.primary} onPress={() => router.push('/estudiantes/eventos')} />
-            <ActionCard title="Inscripción"  description="Unirse a eventos"        icon="add-circle-outline"  color={COLORS.success} onPress={() => router.push('/estudiantes/mi-inscripcion')} />
-            <ActionCard title="Mi Perfil"    description="Ver y editar perfil"     icon="person-outline"      color={COLORS.info}    onPress={() => router.push('/estudiantes/perfil')} />
+            <ActionCard title="Mis Eventos"  description="Ver eventos inscritos"  icon="calendar-outline"    color={COLORS.primary} onPress={() => router.push('/estudiante/eventos')} />
+            <ActionCard title="Inscripción"  description="Unirse a eventos"        icon="add-circle-outline"  color={COLORS.success} onPress={() => router.push('/estudiante/inscripcion')} />
+            <ActionCard title="Mi Perfil"    description="Ver y editar perfil"     icon="person-outline"      color={COLORS.info}    onPress={() => router.push('/estudiante/perfil')} />
           </View>
         </View>
       </ScrollView>
