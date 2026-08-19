@@ -214,7 +214,7 @@ const confirmarInscripcion = async () => {
     const token = await getToken();
 
     // 1. Actualizar los datos del estudiante (endpoint nuevo, sin restricción de admin)
-    await axios.put(`${API_BASE_URL}/estudiante/mis-datos-inscripcion`, {
+    await axios.put(`${API_BASE_URL}/estudiantes/mis-datos-inscripcion`, {
       codigoestudiante: codigo_estudiante, semestre, telefono,
     }, {
       headers: { Authorization: `Bearer ${token}` },
@@ -359,7 +359,7 @@ const fetchMisInscripciones = useCallback(async () => {
       console.warn('No hay token disponible');
       return;
     }
-    const res = await axios.get(`${API_BASE_URL}/estudiante/mis-inscripciones`, {
+    const res = await axios.get(`${API_BASE_URL}/estudiantes/mis-inscripciones`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     setInscritos(new Set(res.data.eventosInscritos || []));
@@ -459,7 +459,7 @@ const fetchUserProfile = useCallback(async () => {
         <View style={styles.section}>
           <View style={styles.sectionHead}>
             <Text style={styles.sectionTitle}>Eventos de tu Facultad</Text>
-            <TouchableOpacity onPress={() => router.push('/estudiante/eventos')}>
+            <TouchableOpacity onPress={() => router.push('/estudiantes/eventos')}>
               <Text style={styles.seeAll}>Ver todos</Text>
             </TouchableOpacity>
           </View>
@@ -491,7 +491,7 @@ const fetchUserProfile = useCallback(async () => {
                 <EventCard
                   key={ev.id?.toString()}
                   event={ev}
-                  onPress={() => router.push(`/estudiante/eventos/${ev.id}`)}
+                  onPress={() => router.push(`/estudiantes/eventos/${ev.id}`)}
                   onInscribir={handleInscribir}
                   yaInscrito={inscritos.has(ev.id)}
                 />
@@ -503,9 +503,9 @@ const fetchUserProfile = useCallback(async () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Acciones Rápidas</Text>
           <View style={{ gap: 10, marginTop: 10 }}>
-            <ActionCard title="Mis Eventos"  description="Ver eventos inscritos"  icon="calendar-outline"    color={COLORS.primary} onPress={() => router.push('/estudiante/eventos')} />
-            <ActionCard title="Inscripción"  description="Unirse a eventos"        icon="add-circle-outline"  color={COLORS.success} onPress={() => router.push('/estudiante/inscripcion')} />
-            <ActionCard title="Mi Perfil"    description="Ver y editar perfil"     icon="person-outline"      color={COLORS.info}    onPress={() => router.push('/estudiante/perfil')} />
+            <ActionCard title="Mis Eventos"  description="Ver eventos inscritos"  icon="calendar-outline"    color={COLORS.primary} onPress={() => router.push('/estudiantes/eventos')} />
+            <ActionCard title="Inscripción"  description="Unirse a eventos"        icon="add-circle-outline"  color={COLORS.success} onPress={() => router.push('/estudiantes/inscripcion')} />
+            <ActionCard title="Mi Perfil"    description="Ver y editar perfil"     icon="person-outline"      color={COLORS.info}    onPress={() => router.push('/estudiantes/perfil')} />
           </View>
         </View>
       </ScrollView>
