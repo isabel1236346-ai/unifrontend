@@ -52,25 +52,34 @@ const InscripcionScreen = () => {
   const [error, setError] = useState(null);
 
   const fetchMisInscripciones = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const token = await getToken();
-      if (!token) { router.replace('/login'); return; }
-
-      const res = await axios.get(`${API_BASE_URL}/estudiante/mis-inscripciones`, {
-        headers: { Authorization: `Bearer ${token}` },
-        timeout: 10000,
-      });
-
-      setEventos(Array.isArray(res.data) ? res.data : []);
-    } catch (err) {
-      console.error('Error al cargar inscripciones:', err);
-      setError('No se pudieron cargar tus inscripciones.');
-    } finally {
-      setLoading(false);
+  setError(null);
+  try {
+    const token = await getToken();
+    if (!token) {
+      setError('Sesión expirada. Inicia sesión nuevamente.');
+      return;
     }
-  }, []);
+
+    const res = await axios.get(`${API_BASE_URL}/estudiante/mis-inscripciones`, {
+      headers: { Authorization: `Bearer ${token}` },
+      timeout: 10000,
+    });
+
+    const raw = Array.isArray(res.data.eventos) ? res.data.eventos : [];
+    const mapped = raw.map(mapInscripcion).filter(ev => ev.id);
+    setItems(mapped);
+  } catch (err) {
+    console.error('Error al cargar mis inscripciones:', err);
+    if (err.response?.status === 404) {
+      setError('No se encontró el endpoint de inscripciones.');
+    } else {
+      setError('No se pudieron cargar tus eventos. Verifica tu conexión.');
+    }
+  } finally {
+    setLoading(false);
+    setRefreshing(false);
+  }
+}, []);
 
   useFocusEffect(useCallback(() => { fetchMisInscripciones(); }, [fetchMisInscripciones]));
 
