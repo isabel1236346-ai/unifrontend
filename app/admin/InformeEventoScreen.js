@@ -350,7 +350,7 @@ const InformeEventoScreen = () => {
   setLoadingInscritos(true);
   try {
     const token = await getTokenAsync();
-    const res = await axios.get(`${API_BASE_URL}/eventos/${eventId}/inscritos`, {
+    const res = await axios.get(`${API_BASE_URL}/estudiantes/estudiantes-inscritos-evento/${eventId}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     setInscritos(res.data.estudiantes || []);
