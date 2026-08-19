@@ -88,7 +88,7 @@ const InformeEventoScreen = () => {
   const [infoPrensa, setInfoPrensa] = useState('');
   const [analisisDesviaciones, setAnalisisDesviaciones] = useState('');
   const [leccionesAprendidas, setLeccionesAprendidas] = useState('');
-
+  const [informeFinalizado, setInformeFinalizado] = useState(false);
   const fetchAllData = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -142,7 +142,13 @@ const InformeEventoScreen = () => {
 
       setEvent(transformedEvent);
       setEsperado(informeRes.data.esperado);
-      setReadOnly(userRes.data.role !== 'admin' && userRes.data.role !== 'academico');
+      const estadoInforme = informeRes.data.informe?.estado;
+      const yaFinalizado = estadoInforme === 'finalizado';
+      const sinPermisoRol = userRes.data.role !== 'admin' && userRes.data.role !== 'academico';
+      setReadOnly(sinPermisoRol || yaFinalizado);
+
+      // Guardá esto también para poder mostrar el mensaje correcto abajo:
+      setInformeFinalizado(yaFinalizado);
 
       const informe = informeRes.data.informe;
       if (informe) {
@@ -632,9 +638,17 @@ const InformeEventoScreen = () => {
         </View>
 
         {readOnly && (
-          <View style={[styles.sectionCard, { backgroundColor: '#FFF3E0', flexDirection: 'row', alignItems: 'center' }]}>
-            <Ionicons name="lock-closed-outline" size={20} color={COLORS.warning} />
-            <Text style={{ marginLeft: 10, color: COLORS.darkText, flex: 1, fontSize: 14 }}>Solo el responsable del evento puede completar este informe.</Text>
+          <View style={[styles.sectionCard, { backgroundColor: informeFinalizado ? '#E8F5E9' : '#FFF3E0', flexDirection: 'row', alignItems: 'center' }]}>
+            <Ionicons
+              name={informeFinalizado ? 'checkmark-done-circle-outline' : 'lock-closed-outline'}
+              size={20}
+              color={informeFinalizado ? COLORS.success : COLORS.warning}
+            />
+            <Text style={{ marginLeft: 10, color: COLORS.darkText, flex: 1, fontSize: 14 }}>
+              {informeFinalizado
+                ? 'Este informe ya fue finalizado y no puede modificarse.'
+                : 'Solo el responsable del evento puede completar este informe.'}
+            </Text>
           </View>
         )}
 
