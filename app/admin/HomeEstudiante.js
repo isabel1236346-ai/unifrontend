@@ -229,11 +229,17 @@ const confirmarInscripcion = async () => {
     setShowInscripcionModal(false);
     Alert.alert('✅ Inscrito', 'Te has registrado exitosamente al evento.');
   } catch (err) {
-    console.error('Error al inscribirse:', err);
+  console.error('Error al inscribirse:', err);
+  if (err.response?.status === 409) {
+    setInscritos(prev => new Set(prev).add(eventoPendiente));
+    setShowInscripcionModal(false);
+    Alert.alert('Ya estabas inscrito', 'Ya tenías una inscripción registrada para este evento.');
+  } else {
     Alert.alert('Error', err.response?.data?.message || 'No se pudo completar la inscripción.');
-  } finally {
-    setSavingInscripcion(false);
   }
+} finally {
+  setSavingInscripcion(false);
+}
 };
   useEffect(() => {
     const init = async () => {
@@ -345,6 +351,18 @@ const confirmarInscripcion = async () => {
     setLoading(false);
   }
 }, []);
+
+const fetchMisInscripciones = useCallback(async () => {
+  try {
+    const token = await getToken();
+    const res = await axios.get(`${API_BASE_URL}/estudiantes/mis-inscripciones`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    setInscritos(new Set(res.data.eventosInscritos || []));
+  } catch (err) {
+    console.error('Error al cargar mis inscripciones:', err);
+  }
+}, []);
 const fetchUserProfile = useCallback(async () => {
   try {
     const token = await getToken();
@@ -370,7 +388,12 @@ const fetchUserProfile = useCallback(async () => {
   }
 }, []);
   useEffect(() => {
-    if (userData) fetchEvents(userData);
+    if (userData) 
+      {
+        fetchEvents(userData);
+        fetchMisInscripciones();
+
+      }
   }, [userData]);
 
   const handleLogout = () => {
