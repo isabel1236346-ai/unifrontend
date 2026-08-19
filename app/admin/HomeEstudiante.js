@@ -355,7 +355,7 @@ const confirmarInscripcion = async () => {
 const fetchMisInscripciones = useCallback(async () => {
   try {
     const token = await getToken();
-    const res = await axios.get(`${API_BASE_URL}/estudiantes/mis-inscripciones`, {
+    const res = await axios.get(`${API_BASE_URL}/estudiante/mis-inscripciones`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     setInscritos(new Set(res.data.eventosInscritos || []));
