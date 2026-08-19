@@ -355,6 +355,10 @@ const confirmarInscripcion = async () => {
 const fetchMisInscripciones = useCallback(async () => {
   try {
     const token = await getToken();
+     if (!token) {
+      console.warn('No hay token disponible');
+      return;
+    }
     const res = await axios.get(`${API_BASE_URL}/estudiante/mis-inscripciones`, {
       headers: { Authorization: `Bearer ${token}` },
     });
