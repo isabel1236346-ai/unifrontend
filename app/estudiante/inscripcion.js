@@ -58,7 +58,7 @@ const InscripcionScreen = () => {
       const token = await getToken();
       if (!token) { router.replace('/login'); return; }
 
-      const res = await axios.get(`${API_BASE_URL}/estudiantes/mis-inscripciones`, {
+      const res = await axios.get(`${API_BASE_URL}/estudiante/mis-inscripciones`, {
         headers: { Authorization: `Bearer ${token}` },
         timeout: 10000,
       });

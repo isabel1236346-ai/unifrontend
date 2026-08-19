@@ -176,7 +176,7 @@ const MisEventosScreen = () => {
         return;
       }
 
-      const res = await axios.get(`${API_BASE_URL}/eventos/mis-inscripciones`, {
+      const res = await axios.get(`${API_BASE_URL}/estudiante/mis-inscripciones`, {
         headers: { Authorization: `Bearer ${token}` },
         timeout: 10000,
       });
