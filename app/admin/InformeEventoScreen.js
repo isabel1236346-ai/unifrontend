@@ -937,12 +937,18 @@ const InformeEventoScreen = () => {
         ListEmptyComponent={<Text style={{ textAlign: 'center', color: COLORS.grayText, marginTop: 30 }}>Aún no hay estudiantes inscritos.</Text>}
         ListHeaderComponent={inscritos.length > 0 ? <Text style={{ marginBottom: 10, color: COLORS.grayText }}>Total: {inscritos.length}</Text> : null}
         renderItem={({ item }) => (
-          <View style={styles.committeeMember}>
-            <Text style={styles.committeeName}>{item.nombre}</Text>
-            <Text style={styles.committeeEmail}>{item.email}</Text>
-            <Text style={styles.creatorRole}>Inscrito: {formatDate(item.fecha_inscripcion)}</Text>
-          </View>
-        )}
+  <View style={styles.committeeMember}>
+    <Text style={styles.committeeName}>{item.nombre}</Text>
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 6 }}>
+      <Text style={styles.committeeRole}>Código: {item.codigoestudiante || '-'}</Text>
+      <Text style={styles.committeeRole}>Carrera: {item.carrera || '-'}</Text>
+      <Text style={styles.committeeRole}>Semestre: {item.semestre || '-'}</Text>
+    </View>
+    <Text style={styles.committeeEmail}>{item.email}</Text>
+    <Text style={styles.committeeRole}>Teléfono: {item.telefono || '-'}</Text>
+    <Text style={styles.creatorRole}>Inscrito: {formatDate(item.fecha_inscripcion)}</Text>
+  </View>
+)}
       />
     )}
   </View>
