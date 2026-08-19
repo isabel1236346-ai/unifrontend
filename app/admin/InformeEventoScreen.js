@@ -10,6 +10,8 @@ import {
   Platform,
   TextInput,
   Image,
+  Modal,
+  FlatList,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -89,6 +91,9 @@ const InformeEventoScreen = () => {
   const [analisisDesviaciones, setAnalisisDesviaciones] = useState('');
   const [leccionesAprendidas, setLeccionesAprendidas] = useState('');
   const [informeFinalizado, setInformeFinalizado] = useState(false);
+  const [showInscritos, setShowInscritos] = useState(false);
+  const [inscritos, setInscritos] = useState([]);
+  const [loadingInscritos, setLoadingInscritos] = useState(false);
   const fetchAllData = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -340,6 +345,21 @@ const InformeEventoScreen = () => {
       Alert.alert('Error', 'No se pudo generar el PDF: ' + err.message);
     }
   };
+  const verInscritos = async () => {
+  setShowInscritos(true);
+  setLoadingInscritos(true);
+  try {
+    const token = await getTokenAsync();
+    const res = await axios.get(`${API_BASE_URL}/eventos/${eventId}/inscritos`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    setInscritos(res.data.estudiantes || []);
+  } catch (err) {
+    Alert.alert('Error', 'No se pudo cargar la lista de inscritos: ' + (err.response?.data?.message || err.message));
+  } finally {
+    setLoadingInscritos(false);
+  }
+};
 
   if (loading) {
     return <View style={styles.centered}><ActivityIndicator size="large" color={COLORS.primary} /><Text style={styles.loadingText}>Cargando...</Text></View>;
@@ -358,7 +378,6 @@ const InformeEventoScreen = () => {
 
       <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
 
-        {/* ============================================ */}
         <View style={styles.blockHeader}>
           <Ionicons name="information-circle" size={22} color={COLORS.white} />
           <Text style={styles.blockHeaderText}>A. DATOS DEL EVENTO</Text>
@@ -629,9 +648,6 @@ const InformeEventoScreen = () => {
           </View>
         )}
 
-        {/* ============================================ */}
-        {/* BLOQUE B: INFORME DE CIERRE (Editable)       */}
-        {/* ============================================ */}
         <View style={[styles.blockHeader, { backgroundColor: COLORS.accent }]}>
           <Ionicons name="create" size={22} color={COLORS.white} />
           <Text style={styles.blockHeaderText}>B. INFORME DE CIERRE (A completar)</Text>
@@ -897,7 +913,40 @@ const InformeEventoScreen = () => {
           <Ionicons name="print-outline" size={20} color={COLORS.white} />
           <Text style={styles.pdfButtonText}>Generar PDF</Text>
         </TouchableOpacity>
+        <TouchableOpacity style={styles.inscritosButton} onPress={verInscritos}>
+          <Ionicons name="people-outline" size={20} color={COLORS.white} />
+          <Text style={styles.inscritosButtonText}>Ver estudiantes inscritos</Text>
+        </TouchableOpacity>
       </ScrollView>
+      <Modal visible={showInscritos} animationType="slide" onRequestClose={() => setShowInscritos(false)}>
+  <View style={{ flex: 1, backgroundColor: COLORS.background }}>
+    <View style={styles.header}>
+      <TouchableOpacity onPress={() => setShowInscritos(false)}>
+        <Ionicons name="close" size={24} color={COLORS.white} />
+      </TouchableOpacity>
+      <Text style={styles.headerTitle}>Estudiantes Inscritos</Text>
+      <View style={{ width: 24 }} />
+    </View>
+    {loadingInscritos ? (
+      <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 30 }} />
+    ) : (
+      <FlatList
+        data={inscritos}
+        keyExtractor={(item) => String(item.idestudiante)}
+        contentContainerStyle={{ padding: 16 }}
+        ListEmptyComponent={<Text style={{ textAlign: 'center', color: COLORS.grayText, marginTop: 30 }}>Aún no hay estudiantes inscritos.</Text>}
+        ListHeaderComponent={inscritos.length > 0 ? <Text style={{ marginBottom: 10, color: COLORS.grayText }}>Total: {inscritos.length}</Text> : null}
+        renderItem={({ item }) => (
+          <View style={styles.committeeMember}>
+            <Text style={styles.committeeName}>{item.nombre}</Text>
+            <Text style={styles.committeeEmail}>{item.email}</Text>
+            <Text style={styles.creatorRole}>Inscrito: {formatDate(item.fecha_inscripcion)}</Text>
+          </View>
+        )}
+      />
+    )}
+  </View>
+</Modal>
     </View>
   );
 };
@@ -914,11 +963,9 @@ const styles = StyleSheet.create({
   loadingText: { marginTop: 15, fontSize: 16, color: COLORS.grayText },
   errorText: { marginTop: 15, fontSize: 16, color: COLORS.accent, textAlign: 'center', marginHorizontal: 20 },
 
-  // Headers de bloques
   blockHeader: { backgroundColor: COLORS.primary, flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 12, marginBottom: 16, gap: 10 },
   blockHeaderText: { color: COLORS.white, fontSize: 16, fontWeight: 'bold' },
 
-  // Tarjetas
   sectionCard: { backgroundColor: COLORS.surface, borderRadius: 16, padding: 20, marginBottom: 16, ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12 }, android: { elevation: 8 } }) },
   sectionTitle: { fontSize: 18, fontWeight: 'bold', color: COLORS.darkText, marginBottom: 12 },
   eventTitle: { fontSize: 24, fontWeight: 'bold', color: COLORS.darkText, marginBottom: 10 },
@@ -1030,6 +1077,8 @@ const styles = StyleSheet.create({
   finalButtonText: { color: COLORS.white, fontWeight: 'bold' },
   pdfButton: { flexDirection: 'row', backgroundColor: COLORS.accent, paddingVertical: 14, borderRadius: 12, justifyContent: 'center', alignItems: 'center', gap: 8, marginBottom: 20 },
   pdfButtonText: { color: COLORS.white, fontSize: 16, fontWeight: 'bold' },
+  inscritosButton: { flexDirection: 'row', backgroundColor: COLORS.secondary, paddingVertical: 12, borderRadius: 12, justifyContent: 'center', alignItems: 'center', gap: 8, marginBottom: 16 },
+  inscritosButtonText: { color: COLORS.white, fontSize: 15, fontWeight: 'bold' },   
 });
 
 export default InformeEventoScreen;
