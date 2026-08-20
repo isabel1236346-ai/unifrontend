@@ -179,7 +179,7 @@ const LoginScreen = () => {
             routeParams = { nombre: user.nombre };
             break;
           case 'student':
-            targetRoute = '/admin/HomeEstudiante';
+            targetRoute = '/estudiante/HomeEstudiante';
             break;
           case 'academico':
             targetRoute = '/admin/HomeAcademico';
