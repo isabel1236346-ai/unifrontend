@@ -404,9 +404,7 @@ const ChatEmbed = ({ userId, userRole }) => {
   const socketRef   = useRef(null);
   const flatListRef = useRef(null);
   const ioRef       = useRef(null);
-  const [ultimoEvento, setUltimoEvento] = useState(null);
-  const [prediccionesIA, setPrediccionesIA] = useState([]);
-  const [loadingPredictions, setLoadingPredictions] = useState(true);
+  
 
   useEffect(() => {
     const cargarEventos = async () => {
@@ -675,6 +673,8 @@ const HomeAdministradorScreen = () => {
   const [showTelegramModal, setShowTelegramModal] = useState(false);
   const [isTelegramLinked, setIsTelegramLinked] = useState(false);
   const [telegramUsername, setTelegramUsername] = useState('');
+  const [prediccionesIA, setPrediccionesIA] = useState([]);
+  const [loadingPredictions, setLoadingPredictions] = useState(true);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
