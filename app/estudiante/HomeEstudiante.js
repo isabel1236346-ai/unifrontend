@@ -60,6 +60,16 @@ const clearSession = async () => {
   } catch {}
 };
 
+// Lee el código/semestre/teléfono del estudiante sin importar cuál variante de
+// nombre de campo haya devuelto el backend (algunos endpoints usan snake_case,
+// otros el nombre "pegado" como el resto del proyecto: idestudiante, etc.)
+const getCodigoEstudiante = (u) => u?.codigoestudiante || u?.codigo_estudiante || '';
+const getSemestre        = (u) => u?.semestre || '';
+const getTelefono        = (u) => u?.telefono || '';
+
+const tieneDatosCompletos = (u) =>
+  !!(getCodigoEstudiante(u) && getSemestre(u) && getTelefono(u));
+
 const CATEGORY_COLORS = {
   taller: '#3B82F6', conferencia: '#EF4444', seminario: '#F59E0B',
   webinar: '#8B5CF6', capacitacion: '#EC4899', charla: '#10B981',
@@ -106,7 +116,7 @@ const mapEvento = (e) => {
   };
 };
 
-const EventCard = ({ event, onPress,onInscribir, yaInscrito }) => {
+const EventCard = ({ event, onPress,onInscribir, yaInscrito, inscribiendo }) => {
   if (!event) return null;
   return (
   <TouchableOpacity style={styles.eventCard} onPress={onPress} activeOpacity={0.85}>
@@ -156,10 +166,16 @@ const EventCard = ({ event, onPress,onInscribir, yaInscrito }) => {
       <TouchableOpacity
         style={[styles.inscribirBtn, yaInscrito && styles.inscribirBtnDisabled]}
         onPress={(e) => { e.stopPropagation(); if (!yaInscrito) onInscribir(event.id); }}
-        disabled={yaInscrito}
+        disabled={yaInscrito || inscribiendo}
       >
-        <Ionicons name={yaInscrito ? 'checkmark-circle' : 'add-circle-outline'} size={16} color={COLORS.white} />
-        <Text style={styles.inscribirBtnText}>{yaInscrito ? 'Inscrito' : 'Inscribirme'}</Text>
+        {inscribiendo ? (
+          <ActivityIndicator size="small" color={COLORS.white} />
+        ) : (
+          <>
+            <Ionicons name={yaInscrito ? 'checkmark-circle' : 'add-circle-outline'} size={16} color={COLORS.white} />
+            <Text style={styles.inscribirBtnText}>{yaInscrito ? 'Inscrito' : 'Inscribirme'}</Text>
+          </>
+        )}
       </TouchableOpacity>
     </View>
   </TouchableOpacity>
@@ -187,60 +203,101 @@ const HomeEstudianteScreen = () => {
   const [error, setError]         = useState(null);
   const [stats, setStats]         = useState({ total: 0, proximos: 0, completados: 0 });
   const [inscritos, setInscritos] = useState(new Set());
+  const [inscribiendoId, setInscribiendoId] = useState(null);
   const [showInscripcionModal, setShowInscripcionModal] = useState(false);
   const [eventoPendiente, setEventoPendiente] = useState(null);
   const [formInscripcion, setFormInscripcion] = useState({ codigo_estudiante: '', semestre: '', telefono: '' });
   const [savingInscripcion, setSavingInscripcion] = useState(false);
 
-  const handleInscribir = (eventId) => {
-  setEventoPendiente(eventId);
-  setFormInscripcion({
-    codigo_estudiante: userData?.codigo_estudiante || '',
-    semestre: userData?.semestre || '',
-    telefono: userData?.telefono || '',
-  });
-  setShowInscripcionModal(true);
-};
-
-const confirmarInscripcion = async () => {
-  const { codigo_estudiante, semestre, telefono } = formInscripcion;
-  if (!codigo_estudiante || !semestre || !telefono) {
-    Alert.alert('Faltan datos', 'Completá código de estudiante, semestre y teléfono.');
-    return;
-  }
-
-  setSavingInscripcion(true);
-  try {
+  // Llama al endpoint de registro para un evento. No toca datos de perfil.
+  const registrarEnEvento = async (eventId) => {
     const token = await getToken();
-
-    // 1. Actualizar los datos del estudiante (endpoint nuevo, sin restricción de admin)
-    await axios.put(`${API_BASE_URL}/estudiantes/mis-datos-inscripcion`, {
-      codigoestudiante: codigo_estudiante, semestre, telefono,
-    }, {
+    await axios.post(`${API_BASE_URL}/eventos/${eventId}/registrar`, {}, {
       headers: { Authorization: `Bearer ${token}` },
     });
+  };
 
-    // 2. Inscribirlo al evento
-    await axios.post(`${API_BASE_URL}/eventos/${eventoPendiente}/registrar`, {}, {
-      headers: { Authorization: `Bearer ${token}` },
+  const handleInscribir = async (eventId) => {
+    // Si el estudiante ya completó código, semestre y teléfono alguna vez,
+    // no volvemos a preguntar: se inscribe directo.
+    if (tieneDatosCompletos(userData)) {
+      setInscribiendoId(eventId);
+      try {
+        await registrarEnEvento(eventId);
+        setInscritos(prev => new Set(prev).add(eventId));
+        Alert.alert('✅ Inscrito', 'Te has registrado exitosamente al evento.');
+      } catch (err) {
+        console.error('Error al inscribirse:', err);
+        if (err.response?.status === 409) {
+          setInscritos(prev => new Set(prev).add(eventId));
+          Alert.alert('Ya estabas inscrito', 'Ya tenías una inscripción registrada para este evento.');
+        } else {
+          Alert.alert('Error', err.response?.data?.message || 'No se pudo completar la inscripción.');
+        }
+      } finally {
+        setInscribiendoId(null);
+      }
+      return;
+    }
+
+    // Si falta algún dato, pedimos el formulario (solo pasará esta vez).
+    setEventoPendiente(eventId);
+    setFormInscripcion({
+      codigo_estudiante: getCodigoEstudiante(userData),
+      semestre: getSemestre(userData),
+      telefono: getTelefono(userData),
     });
+    setShowInscripcionModal(true);
+  };
 
-    setInscritos(prev => new Set(prev).add(eventoPendiente));
-    setShowInscripcionModal(false);
-    Alert.alert('✅ Inscrito', 'Te has registrado exitosamente al evento.');
-  } catch (err) {
-  console.error('Error al inscribirse:', err);
-  if (err.response?.status === 409) {
-    setInscritos(prev => new Set(prev).add(eventoPendiente));
-    setShowInscripcionModal(false);
-    Alert.alert('Ya estabas inscrito', 'Ya tenías una inscripción registrada para este evento.');
-  } else {
-    Alert.alert('Error', err.response?.data?.message || 'No se pudo completar la inscripción.');
-  }
-} finally {
-  setSavingInscripcion(false);
-}
-};
+  const confirmarInscripcion = async () => {
+    const { codigo_estudiante, semestre, telefono } = formInscripcion;
+    if (!codigo_estudiante || !semestre || !telefono) {
+      Alert.alert('Faltan datos', 'Completá código de estudiante, semestre y teléfono.');
+      return;
+    }
+
+    setSavingInscripcion(true);
+    try {
+      const token = await getToken();
+
+      // 1. Actualizar los datos del estudiante (endpoint nuevo, sin restricción de admin)
+      await axios.put(`${API_BASE_URL}/estudiantes/mis-datos-inscripcion`, {
+        codigoestudiante: codigo_estudiante, semestre, telefono,
+      }, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      // 2. Inscribirlo al evento
+      await registrarEnEvento(eventoPendiente);
+
+      // 3. Guardar los datos en el perfil local para no volver a preguntar
+      const userActualizado = {
+        ...userData,
+        codigoestudiante: codigo_estudiante,
+        semestre,
+        telefono,
+      };
+      setUserData(userActualizado);
+      await saveUserData(userActualizado);
+
+      setInscritos(prev => new Set(prev).add(eventoPendiente));
+      setShowInscripcionModal(false);
+      Alert.alert('✅ Inscrito', 'Te has registrado exitosamente al evento.');
+    } catch (err) {
+      console.error('Error al inscribirse:', err);
+      if (err.response?.status === 409) {
+        setInscritos(prev => new Set(prev).add(eventoPendiente));
+        setShowInscripcionModal(false);
+        Alert.alert('Ya estabas inscrito', 'Ya tenías una inscripción registrada para este evento.');
+      } else {
+        Alert.alert('Error', err.response?.data?.message || 'No se pudo completar la inscripción.');
+      }
+    } finally {
+      setSavingInscripcion(false);
+    }
+  };
+
   useEffect(() => {
     const init = async () => {
       const token = await getToken();
@@ -494,6 +551,7 @@ const fetchUserProfile = useCallback(async () => {
                   onPress={() => router.push(`/estudiante/eventos/${ev.id}`)}
                   onInscribir={handleInscribir}
                   yaInscrito={inscritos.has(ev.id)}
+                  inscribiendo={inscribiendoId === ev.id}
                 />
               ))}
             </View>
@@ -519,7 +577,7 @@ const fetchUserProfile = useCallback(async () => {
   <View style={modalStyles.overlay}>
     <View style={modalStyles.card}>
       <Text style={modalStyles.title}>Completá tus datos</Text>
-      <Text style={modalStyles.subtitle}>Necesitamos esta información antes de inscribirte</Text>
+      <Text style={modalStyles.subtitle}>Solo te lo pedimos una vez, para tus próximas inscripciones no volverá a aparecer</Text>
 
       <Text style={modalStyles.label}>Código de estudiante</Text>
       <TextInput
