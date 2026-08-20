@@ -404,6 +404,9 @@ const ChatEmbed = ({ userId, userRole }) => {
   const socketRef   = useRef(null);
   const flatListRef = useRef(null);
   const ioRef       = useRef(null);
+  const [ultimoEvento, setUltimoEvento] = useState(null);
+  const [prediccionesIA, setPrediccionesIA] = useState([]);
+  const [loadingPredictions, setLoadingPredictions] = useState(true);
 
   useEffect(() => {
     const cargarEventos = async () => {
@@ -492,7 +495,6 @@ const ChatEmbed = ({ userId, userRole }) => {
     setInput('');
   };
 
-  // ─── Vista: Lista de eventos ──────────────────────────────────────
   if (vista === 'eventos') {
     return (
       <View style={{ flex: 1, backgroundColor: '#F5F5F5' }}>
@@ -855,7 +857,6 @@ const HomeAdministradorScreen = () => {
     }
   }, []);
 
-  // ── Fetch notifications ────────────────────────────────────────────────────
   const fetchNotifications = useCallback(async () => {
     try {
       const token = await getTokenAsync();
@@ -867,7 +868,26 @@ const HomeAdministradorScreen = () => {
     }
   }, []);
 
-  // ── Mark notification as read ──────────────────────────────────────────────
+  const fetchPredictions = useCallback(async () => {
+    try {
+      const token = await getTokenAsync();
+      if (!token) return;
+      
+      setLoadingPredictions(true);
+      const res = await axios.get(`${API_BASE_URL}/predictions/analysis`, { 
+        headers: { Authorization: `Bearer ${token}` } 
+      });
+      
+      if (res.data.success && Array.isArray(res.data.data)) {
+        // Mostramos solo los próximos 3 eventos para no saturar el dashboard
+        setPrediccionesIA(res.data.data.slice(0, 3));
+      }
+    } catch (error) {
+      console.error('Error al cargar predicciones de IA:', error);
+    } finally {
+      setLoadingPredictions(false);
+    }
+  }, []);
   const markAsRead = async (notifId) => {
     try {
       const token = await getTokenAsync();
@@ -891,9 +911,10 @@ const HomeAdministradorScreen = () => {
       fetchDashboardData();
       fetchNotifications();
       checkTelegramStatus();
+      fetchPredictions();
     };
     validateSession();
-  }, [router, fetchDashboardData, fetchNotifications, checkTelegramStatus]);
+  }, [router, fetchDashboardData, fetchNotifications, checkTelegramStatus, fetchPredictions]);
 
   const { cardWidth: actionsCardWidth } = useMemo(() => {
     const availableWidth = windowWidth - 40;
@@ -1015,7 +1036,6 @@ const HomeAdministradorScreen = () => {
           </ChartCard>
         </Section>
 
-        {/* ── ALERTAS ── */}
         <Section title="Alertas del Sistema" subtitle="Estado operativo actual">
           <View style={styles.alertsContainer}>
             {parseInt(pendingContentCount) > 10 && (
@@ -1048,7 +1068,56 @@ const HomeAdministradorScreen = () => {
           </View>
         </Section>
 
-        {/* ── HERRAMIENTAS ── */}
+        <Section title="🤖 Análisis Predictivo (IA)" subtitle="Estimaciones de asistencia basadas en datos históricos">
+          {loadingPredictions ? (
+            <View style={styles.loadingBox}>
+              <ActivityIndicator size="large" color={COLORS.primary} />
+              <Text style={styles.loadingText}>La IA está analizando los datos...</Text>
+            </View>
+          ) : prediccionesIA.length === 0 ? (
+            <ChartCard empty={true} emptyIcon="analytics-outline" title="Sin predicciones disponibles" />
+          ) : (
+            <View style={{ gap: 12 }}>
+              {prediccionesIA.map((pred, index) => {
+                // Determinar color según confianza
+                const confColor = pred.confianza_ia === 'alta' ? COLORS.success : 
+                                  pred.confianza_ia === 'media' ? COLORS.warning : COLORS.accent;
+                
+                return (
+                  <View key={index} style={styles.predictionCard}>
+                    <View style={styles.predictionHeader}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.predictionTitle} numberOfLines={1}>{pred.nombreevento}</Text>
+                        <Text style={styles.predictionDate}>
+                          {new Date(pred.fechaevento).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </Text>
+                      </View>
+                      <View style={[styles.confidenceBadge, { backgroundColor: confColor + '15' }]}>
+                        <Text style={[styles.confidenceText, { color: confColor }]}>
+                          {pred.confianza_ia?.toUpperCase()}
+                        </Text>
+                      </View>
+                    </View>
+                    
+                    <View style={styles.predictionStats}>
+                      <View style={styles.predictionStatItem}>
+                        <Text style={styles.predictionLabel}>Inscritos</Text>
+                        <Text style={styles.predictionValue}>{pred.participacion_esperada || 0}</Text>
+                      </View>
+                      <View style={styles.predictionDivider} />
+                      <View style={styles.predictionStatItem}>
+                        <Text style={styles.predictionLabel}>Predicción IA</Text>
+                        <Text style={[styles.predictionValue, { color: COLORS.primary, fontWeight: '800' }]}>
+                          {pred.prediccion_ia}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+        </Section>
         <Section title="Herramientas de Gestión" subtitle="Acceda a las funcionalidades principales">
           {loadingDashboard ? (
             <View style={styles.loadingBox}><ActivityIndicator size="large" color={COLORS.primary} /></View>
@@ -1343,12 +1412,10 @@ const HomeAdministradorScreen = () => {
   );
 };
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   scrollView: { flex: 1 },
 
-  // Header
   header: {
     width: '100%', paddingHorizontal: 20,
     paddingTop: (StatusBar.currentHeight || 40) + 16, paddingBottom: 16,
@@ -1749,6 +1816,73 @@ const styles = StyleSheet.create({
   // Loading
   loadingBox: { alignItems: 'center', paddingVertical: 40 },
   loadingText: { marginTop: 10, fontSize: 14, color: COLORS.textSecondary },
+    // Prediction Cards (IA)
+  predictionCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  predictionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  predictionTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    marginBottom: 4,
+  },
+  predictionDate: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+  },
+  confidenceBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  confidenceText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  predictionStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  predictionStatItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  predictionLabel: {
+    fontSize: 11,
+    color: COLORS.textTertiary,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  predictionValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+  },
+  predictionDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: COLORS.divider,
+  },
 });
 
 export default HomeAdministradorScreen;
