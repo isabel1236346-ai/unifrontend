@@ -1,4 +1,4 @@
-// EventosAprobadosPorFacultad.js - Versión Corregida
+// EventosAprobadosPorFacultad.js - Versión Corregida y Optimizada
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
@@ -11,8 +11,7 @@ import {
   Platform,
   Alert,
   SectionList,
-  Dimensions,
-  ScrollView
+  Dimensions
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,7 +20,8 @@ import * as SecureStore from 'expo-secure-store';
 
 const { width } = Dimensions.get('window');
 
-const API_BASE_URL = 'https://unibackend-production.up.railway.app';const TOKEN_KEY = 'adminAuthToken';
+const API_BASE_URL = 'https://unibackend-production.up.railway.app';
+const TOKEN_KEY = 'adminAuthToken';
 
 const COLORS = {
   primary: '#E95A0C',
@@ -63,11 +63,9 @@ const parseEventDate = (dateStr) => {
   if (!dateStr) return new Date(0);
   if (dateStr instanceof Date && !isNaN(dateStr.getTime())) return dateStr;
   
-  // Intentar parsear como string ISO (ej: "2026-08-12T15:00:00.000Z") o formato estándar
   const parsed = new Date(dateStr);
   if (!isNaN(parsed.getTime())) return parsed;
   
-  // Fallback para formato DD/MM/YYYY
   if (typeof dateStr === 'string' && dateStr.includes('/')) {
     const parts = dateStr.split('/');
     if (parts.length === 3) {
@@ -78,31 +76,25 @@ const parseEventDate = (dateStr) => {
     }
   }
   
-  return new Date(0); // Fecha inválida
+  return new Date(0);
 };
 
 const isEventPast = (event) => {
-  // Priorizar fechaevento (ISO) sobre date (formateada), o viceversa
   const dateStr = event.fechaevento || event.date;
-  if (!dateStr) return true; // Si no hay fecha, lo consideramos pasado por seguridad
+  if (!dateStr) return true; 
   
   const eventDate = parseEventDate(dateStr);
   const today = new Date();
   
-  // Normalizar a medianoche para comparar solo días
   eventDate.setHours(0, 0, 0, 0);
   today.setHours(0, 0, 0, 0);
   
-  const isPast = eventDate < today;
-  console.log(`📅 [FECHA] Evento: "${event.title || event.nombreevento}" | Fecha: ${dateStr} | ¿Es pasado?: ${isPast}`);
-  
-  return isPast;
+  return eventDate < today;
 };
 
 const groupEventsByStatusAndFaculty = (events) => {
   console.log('🔄 [AGRUPANDO] Total de eventos a procesar:', events.length);
   
-  // Usar la función isEventPast corregida que acepta el objeto completo
   const activos = events.filter(e => !isEventPast(e));
   const pasados = events.filter(e => isEventPast(e));
   
@@ -113,7 +105,6 @@ const groupEventsByStatusAndFaculty = (events) => {
   if (activos.length > 0) {
     const groupedActivos = {};
     activos.forEach(event => {
-      // El backend puede enviar 'faculty' o 'facultad'
       const faculty = event.faculty || event.facultad || 'Sin facultad';
       if (!groupedActivos[faculty]) groupedActivos[faculty] = [];
       groupedActivos[faculty].push(event);
@@ -161,6 +152,7 @@ const groupEventsByStatusAndFaculty = (events) => {
 };
 
 const formatSubmittedDate = (date) => {
+  if (!date) return 'N/A';
   const now = new Date();
   const submittedDate = new Date(date);
   const diff = Math.floor((now - submittedDate) / 1000);
@@ -169,8 +161,6 @@ const formatSubmittedDate = (date) => {
   const days = Math.floor(diff / 86400);
   return `Hace ${days} día${days > 1 ? 's' : ''}`;
 };
-
-
 
 const getFacultyColor = (facultyName) => {
   const colors = [
@@ -187,7 +177,7 @@ const EventosAprobadosPorFacultad = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-   const fetchApprovedEventsByFaculty = useCallback(async () => {
+  const fetchApprovedEventsByFaculty = useCallback(async () => {
     try {
       const token = await getTokenAsync();
       
@@ -204,9 +194,7 @@ const EventosAprobadosPorFacultad = () => {
         },
       });
 
-      console.log('📦 [API RESPONSE] Datos crudos del backend:', response.data);
       console.log('📦 [API RESPONSE] Cantidad de eventos recibidos:', response.data?.length || 0);
-
       setEvents(response.data || []);
 
     } catch (error) {
@@ -239,11 +227,11 @@ const EventosAprobadosPorFacultad = () => {
   const handleEventPress = (event) => {
     router.push({
       pathname: '/admin/EventDetailUpdateScreen',
-      params: { eventId: event.id }
+      params: { eventId: event.id || event.idevento } // ✅ CORREGIDO: Fallback a idevento
     });
   };
 
-    const renderEventItem = ({ item }) => {
+  const renderEventItem = ({ item }) => {
     if (!item || typeof item !== 'object' || (!item.id && !item.idevento)) {
       return null;
     }
@@ -268,11 +256,7 @@ const EventosAprobadosPorFacultad = () => {
         <View style={styles.cardContent}>
           <View style={styles.eventHeader}>
             <View style={styles.titleRow}>
-              <Text 
-                style={[styles.eventTitle, isPast && styles.eventTitlePast]} 
-                numberOfLines={2}
-              >
-                {/* Fallback para el título */}
+              <Text style={[styles.eventTitle, isPast && styles.eventTitlePast]} numberOfLines={2}>
                 {item.title || item.nombreevento || 'Sin título'}
               </Text>
               <View style={styles.idBadge}>
@@ -293,7 +277,6 @@ const EventosAprobadosPorFacultad = () => {
           <View style={styles.infoGrid}>
             <View style={styles.infoRow}>
               <Ionicons name="calendar-outline" size={14} color={isPast ? COLORS.grayMedium : COLORS.grayText} />
-              {/* Fallback para la fecha */}
               <Text style={[styles.infoText, isPast && styles.infoTextPast]}>
                 {item.date || (item.fechaevento ? new Date(item.fechaevento).toLocaleDateString('es-ES') : 'N/A')}
               </Text>
@@ -354,43 +337,72 @@ const EventosAprobadosPorFacultad = () => {
   };
 
   const renderSectionHeader = ({ section }) => {
-    if (section.type === 'activos' || section.type === 'pasados') {
-      return (
-        <View style={[
-          styles.sectionHeader,
-          section.isPastSection && styles.sectionHeaderPast
-        ]}>
-          <View style={styles.sectionHeaderContent}>
-            <View style={[
-              styles.facultyDot, 
-              { backgroundColor: section.isPastSection ? COLORS.grayMedium : COLORS.primary }
-            ]} />
-            <Text style={[
-              styles.sectionTitle,
-              section.isPastSection && styles.sectionTitlePast
-            ]}>
-              {section.title}
-            </Text>
-            <View style={styles.countBadge}>
-              <Text style={styles.countText}>{section.data.length}</Text>
-            </View>
-          </View>
-        </View>
-      );
-    }
-    
     return (
-      <View style={styles.sectionHeader}>
+      <View style={[
+        styles.sectionHeader,
+        section.isPastSection && styles.sectionHeaderPast
+      ]}>
         <View style={styles.sectionHeaderContent}>
-          <View style={[styles.facultyDot, { backgroundColor: COLORS.primary }]} />
-          <Text style={styles.sectionTitle}>{section.title}</Text>
+          <View style={[
+            styles.facultyDot, 
+            { backgroundColor: section.isPastSection ? COLORS.grayMedium : COLORS.primary }
+          ]} />
+          <Text style={[
+            styles.sectionTitle,
+            section.isPastSection && styles.sectionTitlePast
+          ]}>
+            {section.title}
+          </Text>
           <View style={styles.countBadge}>
-            <Text style={styles.countText}>{section.count}</Text>
+            <Text style={styles.countText}>{section.data.length}</Text>
           </View>
         </View>
       </View>
     );
   };
+
+  // ✅ CORREGIDO: Componentes separados para Header y Footer de la lista
+  const renderListHeader = () => (
+    events.length > 0 ? (
+      <View style={styles.topStatsContainer}>
+        <View style={[styles.topStatCard, { backgroundColor: COLORS.primary }]}>
+          <Ionicons name="calendar" size={24} color={COLORS.white} />
+          <Text style={styles.topStatNumber}>{events.length}</Text>
+          <Text style={styles.topStatLabel}>Eventos totales</Text>
+        </View>
+        
+        <View style={[styles.topStatCard, { backgroundColor: COLORS.accent }]}>
+          <Ionicons name="school" size={24} color={COLORS.white} />
+          <Text style={styles.topStatNumber}>{uniqueFaculties}</Text>
+          <Text style={styles.topStatLabel}>Facultades</Text>
+        </View>
+      </View>
+    ) : null
+  );
+
+  const renderListFooter = () => (
+    events.length > 0 ? (
+      <View style={styles.bottomStatsContainer}>
+        <View style={[styles.bottomStatCard, { backgroundColor: COLORS.primary }]}>
+          <Ionicons name="calendar" size={20} color={COLORS.white} />
+          <Text style={styles.bottomStatNumber}>{events.length}</Text>
+          <Text style={styles.bottomStatLabel}>Total</Text>
+        </View>
+        
+        <View style={[styles.bottomStatCard, { backgroundColor: COLORS.accent }]}>
+          <Ionicons name="school" size={20} color={COLORS.white} />
+          <Text style={styles.bottomStatNumber}>{uniqueFaculties}</Text>
+          <Text style={styles.bottomStatLabel}>Facultades</Text>
+        </View>
+        
+        <View style={[styles.bottomStatCard, { backgroundColor: COLORS.grayMedium }]}>
+          <Ionicons name="checkmark-circle" size={20} color={COLORS.white} />
+          <Text style={styles.bottomStatNumber}>{finalizedCount}</Text>
+          <Text style={styles.bottomStatLabel}>Finalizados</Text>
+        </View>
+      </View>
+    ) : null
+  );
 
   if (loading) {
     return (
@@ -402,14 +414,15 @@ const EventosAprobadosPorFacultad = () => {
   }
 
   const sections = groupEventsByStatusAndFaculty(events);
-  const finalizedCount = events.filter(e => isEventPast(e.date)).length;
-  const uniqueFaculties = new Set(events.map(e => e.faculty || 'Sin facultad')).size;
+  // ✅ CORREGIDO: Fallback a 'facultad' y cálculo correcto con el objeto completo
+  const uniqueFaculties = new Set(events.map(e => e.faculty || e.facultad || 'Sin facultad')).size;
+  const finalizedCount = events.filter(e => isEventPast(e)).length; // ✅ CORREGIDO: Se pasa el objeto 'e', no 'e.date'
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
       
-      {/* Header */}
+      {/* Header Fijo */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={COLORS.white} />
@@ -434,70 +447,38 @@ const EventosAprobadosPorFacultad = () => {
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Stats Cards Superiores */}
-        {events.length > 0 && (
-          <View style={styles.topStatsContainer}>
-            <View style={[styles.topStatCard, { backgroundColor: COLORS.primary }]}>
-              <Ionicons name="calendar" size={24} color={COLORS.white} />
-              <Text style={styles.topStatNumber}>{events.length}</Text>
-              <Text style={styles.topStatLabel}>Eventos totales</Text>
+      {/* ✅ CORREGIDO: SectionList como único componente scrollable, eliminando el ScrollView externo */}
+      <SectionList
+        sections={sections}
+        // ✅ CORREGIDO: Fallback a idevento para evitar claves "undefined" duplicadas
+        keyExtractor={(item) => `event-${item.id || item.idevento || Math.random()}`}
+        renderItem={renderEventItem}
+        renderSectionHeader={renderSectionHeader}
+        ListHeaderComponent={renderListHeader}
+        ListFooterComponent={renderListFooter}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        stickySectionHeadersEnabled={true}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[COLORS.primary]}
+            tintColor={COLORS.primary}
+          />
+        }
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <View style={styles.emptyIconContainer}>
+              <Ionicons name="school-outline" size={80} color={COLORS.grayMedium} />
             </View>
-            
-            <View style={[styles.topStatCard, { backgroundColor: COLORS.accent }]}>
-              <Ionicons name="school" size={24} color={COLORS.white} />
-              <Text style={styles.topStatNumber}>{uniqueFaculties}</Text>
-              <Text style={styles.topStatLabel}>Facultades</Text>
-            </View>
+            <Text style={styles.emptyTitle}>No hay eventos</Text>
+            <Text style={styles.emptyText}>
+              No se encontraron eventos aprobados organizados por facultad
+            </Text>
           </View>
-        )}
-
-        {/* Lista de eventos */}
-        <SectionList
-          sections={sections}
-          keyExtractor={(item) => `event-${item.id}`}
-          renderItem={renderEventItem}
-          renderSectionHeader={renderSectionHeader}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          stickySectionHeadersEnabled={true}
-          scrollEnabled={false}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <View style={styles.emptyIconContainer}>
-                <Ionicons name="school-outline" size={80} color={COLORS.grayMedium} />
-              </View>
-              <Text style={styles.emptyTitle}>No hay eventos</Text>
-              <Text style={styles.emptyText}>
-                No se encontraron eventos aprobados organizados por facultad
-              </Text>
-            </View>
-          }
-        />
-
-        {/* Stats Cards Inferiores */}
-        {events.length > 0 && (
-          <View style={styles.bottomStatsContainer}>
-            <View style={[styles.bottomStatCard, { backgroundColor: COLORS.primary }]}>
-              <Ionicons name="calendar" size={20} color={COLORS.white} />
-              <Text style={styles.bottomStatNumber}>{events.length}</Text>
-              <Text style={styles.bottomStatLabel}>Total</Text>
-            </View>
-            
-            <View style={[styles.bottomStatCard, { backgroundColor: COLORS.accent }]}>
-              <Ionicons name="school" size={20} color={COLORS.white} />
-              <Text style={styles.bottomStatNumber}>{uniqueFaculties}</Text>
-              <Text style={styles.bottomStatLabel}>Facultades</Text>
-            </View>
-            
-            <View style={[styles.bottomStatCard, { backgroundColor: COLORS.grayMedium }]}>
-              <Ionicons name="checkmark-circle" size={20} color={COLORS.white} />
-              <Text style={styles.bottomStatNumber}>{finalizedCount}</Text>
-              <Text style={styles.bottomStatLabel}>Finalizados</Text>
-            </View>
-          </View>
-        )}
-      </ScrollView>
+        }
+      />
     </View>
   );
 };
@@ -519,8 +500,6 @@ const styles = StyleSheet.create({
     color: COLORS.grayText,
     fontWeight: '500',
   },
-  
-  // Header
   header: {
     backgroundColor: COLORS.primary,
     flexDirection: 'row',
@@ -565,8 +544,6 @@ const styles = StyleSheet.create({
   rotating: {
     transform: [{ rotate: '180deg' }],
   },
-
-  // Stats Superiores
   topStatsContainer: {
     flexDirection: 'row',
     paddingHorizontal: 16,
@@ -604,8 +581,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     opacity: 0.9,
   },
-
-  // Stats Inferiores
   bottomStatsContainer: {
     flexDirection: 'row',
     paddingHorizontal: 16,
@@ -646,8 +621,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     opacity: 0.9,
   },
-
-  // Section Header
   sectionHeader: {
     backgroundColor: COLORS.background,
     paddingVertical: 12,
@@ -701,16 +674,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.primary,
   },
-
-  // Event Card
   listContent: {
     paddingBottom: 20,
-    paddingHorizontal: 16,
   },
   eventCard: {
     backgroundColor: COLORS.white,
     borderRadius: 16,
     marginBottom: 12,
+    marginHorizontal: 16, // ✅ Ajustado para que el padding lo maneje la tarjeta
     overflow: 'hidden',
     flexDirection: 'row',
     ...Platform.select({
@@ -783,8 +754,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.white,
   },
-  
-  // Info
   infoGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -806,8 +775,6 @@ const styles = StyleSheet.create({
   infoTextPast: {
     color: COLORS.grayMedium,
   },
-  
-  // Phase
   phaseContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -844,8 +811,6 @@ const styles = StyleSheet.create({
     color: COLORS.grayMedium,
     marginTop: 2,
   },
-  
-  // Footer Button
   viewDetailsButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -861,8 +826,6 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     marginRight: 4,
   },
-
-  // Empty State
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
