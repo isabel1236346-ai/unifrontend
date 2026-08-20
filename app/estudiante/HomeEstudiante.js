@@ -214,7 +214,7 @@ const confirmarInscripcion = async () => {
     const token = await getToken();
 
     // 1. Actualizar los datos del estudiante (endpoint nuevo, sin restricción de admin)
-    await axios.put(`${API_BASE_URL}/estudiante/mis-datos-inscripcion`, {
+    await axios.put(`${API_BASE_URL}/estudiantes/mis-datos-inscripcion`, {
       codigoestudiante: codigo_estudiante, semestre, telefono,
     }, {
       headers: { Authorization: `Bearer ${token}` },
@@ -355,10 +355,14 @@ const confirmarInscripcion = async () => {
 const fetchMisInscripciones = useCallback(async () => {
   try {
     const token = await getToken();
-    const res = await axios.get(`${API_BASE_URL}/estudiante/mis-inscripciones`, {
+    const res = await axios.get(`${API_BASE_URL}/estudiantes/mis-inscripciones`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    setInscritos(new Set(res.data.eventosInscritos || []));
+     const eventos = Array.isArray(res.data) 
+      ? res.data 
+      : (res.data?.eventosInscritos || []);
+      
+    setInscritos(new Set(eventos));
   } catch (err) {
     console.error('Error al cargar mis inscripciones:', err);
   }
