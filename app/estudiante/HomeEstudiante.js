@@ -1075,6 +1075,9 @@ const modalStyles = StyleSheet.create({
   cancelBtnText: { color: COLORS.textSecondary, fontWeight: '600' },
   confirmBtn: { flex: 1, backgroundColor: COLORS.success, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
   confirmBtnText: { color: COLORS.white, fontWeight: '600' },
+});
+const telegramStyles = StyleSheet.create({
+  
     modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
