@@ -48,12 +48,12 @@ const InfoRow = ({ icon, label, value, editable = false, onEdit }) => (
 const PerfilEstudianteScreen = () => {
   const router = useRouter();
   const [perfil, setPerfil] = useState(null);
+  const [datosEstudiante, setDatosEstudiante] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [saving, setSaving] = useState(false);
   
-  // Estados para el formulario de edición
   const [formData, setFormData] = useState({
     codigoestudiante: '',
     semestre: '',
@@ -68,14 +68,32 @@ const PerfilEstudianteScreen = () => {
       const token = await getToken();
       if (!token) { router.replace('/login'); return; }
 
-      const res = await axios.get(`${API_BASE_URL}/profile`, {
+      // 1️⃣ Obtener perfil básico
+      const resProfile = await axios.get(`${API_BASE_URL}/profile`, {
         headers: { Authorization: `Bearer ${token}` },
         timeout: 8000,
       });
 
-      setPerfil(res.data);
+      console.log('📋 Perfil recibido:', JSON.stringify(resProfile.data, null, 2));
+
+      // 2️⃣ Obtener datos específicos de estudiante (tabla estudiante)
+      try {
+        const resEstudiante = await axios.get(`${API_BASE_URL}/estudiantes/mis-datos`, {
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 8000,
+        });
+        
+        console.log('🎓 Datos de estudiante:', JSON.stringify(resEstudiante.data, null, 2));
+        setDatosEstudiante(resEstudiante.data);
+      } catch (err) {
+        console.log('⚠️ No se pudo obtener datos de estudiante:', err.message);
+        // Si no existe el endpoint, usamos lo que venga en profile
+        setDatosEstudiante(resProfile.data.estudiante || {});
+      }
+
+      setPerfil(resProfile.data);
     } catch (err) {
-      console.error('Error al cargar perfil:', err);
+      console.error(' Error al cargar perfil:', err);
       setError('No se pudo cargar tu perfil. Verifica tu conexión.');
     } finally {
       setLoading(false);
@@ -85,18 +103,16 @@ const PerfilEstudianteScreen = () => {
   useEffect(() => { fetchPerfil(); }, []);
 
   const handleEditPress = () => {
-    // Cargar los datos actuales en el formulario
     setFormData({
-      codigoestudiante: perfil?.codigoestudiante || perfil?.codigo_estudiante || '',
-      semestre: perfil?.semestre || '',
-      telefono: perfil?.telefono || '',
+      codigoestudiante: datosEstudiante?.codigoestudiante || perfil?.codigoestudiante || '',
+      semestre: datosEstudiante?.semestre || perfil?.semestre || '',
+      telefono: datosEstudiante?.telefono || perfil?.telefono || '',
       ci: perfil?.ci || perfil?.carnet || ''
     });
     setShowEditModal(true);
   };
 
   const handleSaveProfile = async () => {
-    // Validar campos requeridos
     if (!formData.codigoestudiante || !formData.semestre) {
       Alert.alert('Campos requeridos', 'El código de estudiante y el semestre son obligatorios.');
       return;
@@ -117,11 +133,11 @@ const PerfilEstudianteScreen = () => {
 
       Alert.alert('✅ Éxito', 'Perfil actualizado correctamente');
       setShowEditModal(false);
-      fetchPerfil(); // Recargar el perfil con los nuevos datos
+      fetchPerfil();
       
     } catch (err) {
       console.error('Error al actualizar perfil:', err);
-      Alert.alert('Error', 'No se pudo actualizar el perfil. Inténtalo de nuevo.');
+      Alert.alert('Error', err.response?.data?.message || 'No se pudo actualizar el perfil.');
     } finally {
       setSaving(false);
     }
@@ -130,9 +146,10 @@ const PerfilEstudianteScreen = () => {
   const nombreCompleto = `${perfil?.nombre || ''} ${perfil?.apellidopat || ''} ${perfil?.apellidomat || ''}`.trim();
   const facultadNombre = perfil?.facultad_nombre || perfil?.facultad?.nombre || perfil?.academico?.facultad || 'Sin facultad';
   
-  const codigoEstudiante = perfil?.codigoestudiante || perfil?.codigo_estudiante || 'No registrado';
-  const semestre = perfil?.semestre || 'No registrado';
-  const telefono = perfil?.telefono || 'No registrado';
+  // ✅ PRIORIZAR datos de la tabla estudiante
+  const codigoEstudiante = datosEstudiante?.codigoestudiante || perfil?.codigoestudiante || perfil?.codigo_estudiante || 'No registrado';
+  const semestre = datosEstudiante?.semestre || perfil?.semestre || 'No registrado';
+  const telefono = datosEstudiante?.telefono || perfil?.telefono || 'No registrado';
   const ci = perfil?.ci || perfil?.carnet || 'No especificado';
 
   return (
@@ -176,20 +193,14 @@ const PerfilEstudianteScreen = () => {
                 label="Código de Estudiante" 
                 value={codigoEstudiante}
                 editable={true}
-                onEdit={() => {
-                  setFormData({...formData, codigoestudiante: codigoEstudiante === 'No registrado' ? '' : codigoEstudiante});
-                  setShowEditModal(true);
-                }}
+                onEdit={handleEditPress}
               />
               <InfoRow 
                 icon="book-outline" 
                 label="Semestre" 
                 value={semestre}
                 editable={true}
-                onEdit={() => {
-                  setFormData({...formData, semestre: semestre === 'No registrado' ? '' : semestre});
-                  setShowEditModal(true);
-                }}
+                onEdit={handleEditPress}
               />
               
               <View style={styles.divider} />
@@ -200,20 +211,14 @@ const PerfilEstudianteScreen = () => {
                 label="Carnet / CI" 
                 value={ci}
                 editable={true}
-                onEdit={() => {
-                  setFormData({...formData, ci: ci === 'No especificado' ? '' : ci});
-                  setShowEditModal(true);
-                }}
+                onEdit={handleEditPress}
               />
               <InfoRow 
                 icon="call-outline" 
                 label="Teléfono" 
                 value={telefono}
                 editable={true}
-                onEdit={() => {
-                  setFormData({...formData, telefono: telefono === 'No registrado' ? '' : telefono});
-                  setShowEditModal(true);
-                }}
+                onEdit={handleEditPress}
               />
               <InfoRow icon="mail-outline" label="Correo Electrónico" value={perfil?.email || perfil?.correo} />
             </View>
@@ -226,7 +231,6 @@ const PerfilEstudianteScreen = () => {
         )}
       </ScrollView>
 
-      {/* Modal de Edición */}
       <Modal
         visible={showEditModal}
         animationType="slide"
@@ -387,7 +391,6 @@ const styles = StyleSheet.create({
   },
   editBtnText: { color: COLORS.white, fontSize: 16, fontWeight: '700' },
 
-  // Modal styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
