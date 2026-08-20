@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  ActivityIndicator, StatusBar, Platform, Alert
+  ActivityIndicator, StatusBar, Platform, Alert, Modal,
+  TextInput, KeyboardAvoidingView, TouchableWithoutFeedback
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,14 +26,21 @@ const getToken = async () => {
   } catch { return null; }
 };
 
-const InfoRow = ({ icon, label, value }) => (
+const InfoRow = ({ icon, label, value, editable = false, onEdit }) => (
   <View style={styles.infoRow}>
     <View style={styles.infoIconWrap}>
       <Ionicons name={icon} size={18} color={COLORS.primary} />
     </View>
     <View style={{ flex: 1 }}>
       <Text style={styles.infoLabel}>{label}</Text>
-      <Text style={styles.infoValue}>{value || 'No especificado'}</Text>
+      <View style={styles.infoValueContainer}>
+        <Text style={styles.infoValue}>{value || 'No especificado'}</Text>
+        {editable && onEdit && (
+          <TouchableOpacity onPress={onEdit} style={styles.editIcon}>
+            <Ionicons name="create-outline" size={16} color={COLORS.primary} />
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   </View>
 );
@@ -42,6 +50,16 @@ const PerfilEstudianteScreen = () => {
   const [perfil, setPerfil] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [saving, setSaving] = useState(false);
+  
+  // Estados para el formulario de edición
+  const [formData, setFormData] = useState({
+    codigoestudiante: '',
+    semestre: '',
+    telefono: '',
+    ci: ''
+  });
 
   const fetchPerfil = async () => {
     setLoading(true);
@@ -66,13 +84,56 @@ const PerfilEstudianteScreen = () => {
 
   useEffect(() => { fetchPerfil(); }, []);
 
+  const handleEditPress = () => {
+    // Cargar los datos actuales en el formulario
+    setFormData({
+      codigoestudiante: perfil?.codigoestudiante || perfil?.codigo_estudiante || '',
+      semestre: perfil?.semestre || '',
+      telefono: perfil?.telefono || '',
+      ci: perfil?.ci || perfil?.carnet || ''
+    });
+    setShowEditModal(true);
+  };
+
+  const handleSaveProfile = async () => {
+    // Validar campos requeridos
+    if (!formData.codigoestudiante || !formData.semestre) {
+      Alert.alert('Campos requeridos', 'El código de estudiante y el semestre son obligatorios.');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const token = await getToken();
+      
+      await axios.put(`${API_BASE_URL}/estudiantes/mis-datos-inscripcion`, {
+        codigoestudiante: formData.codigoestudiante,
+        semestre: formData.semestre,
+        telefono: formData.telefono,
+        ci: formData.ci
+      }, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      Alert.alert('✅ Éxito', 'Perfil actualizado correctamente');
+      setShowEditModal(false);
+      fetchPerfil(); // Recargar el perfil con los nuevos datos
+      
+    } catch (err) {
+      console.error('Error al actualizar perfil:', err);
+      Alert.alert('Error', 'No se pudo actualizar el perfil. Inténtalo de nuevo.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const nombreCompleto = `${perfil?.nombre || ''} ${perfil?.apellidopat || ''} ${perfil?.apellidomat || ''}`.trim();
   const facultadNombre = perfil?.facultad_nombre || perfil?.facultad?.nombre || perfil?.academico?.facultad || 'Sin facultad';
   
-  // ✅ Campos críticos que antes pedía el modal (para verificar que se guardaron)
   const codigoEstudiante = perfil?.codigoestudiante || perfil?.codigo_estudiante || 'No registrado';
   const semestre = perfil?.semestre || 'No registrado';
   const telefono = perfil?.telefono || 'No registrado';
+  const ci = perfil?.ci || perfil?.carnet || 'No especificado';
 
   return (
     <View style={styles.container}>
@@ -102,7 +163,6 @@ const PerfilEstudianteScreen = () => {
               <Text style={styles.nombre}>{nombreCompleto || 'Estudiante'}</Text>
               <Text style={styles.correo}>{perfil?.email || perfil?.correo || 'Sin correo'}</Text>
               
-              {/* Badge de Facultad */}
               <View style={styles.facultadBadge}>
                 <Ionicons name="school" size={14} color={COLORS.primary} />
                 <Text style={styles.facultadBadgeText}>{facultadNombre}</Text>
@@ -111,27 +171,167 @@ const PerfilEstudianteScreen = () => {
 
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Información Académica</Text>
-              <InfoRow icon="barcode-outline" label="Código de Estudiante" value={codigoEstudiante} />
-              <InfoRow icon="book-outline" label="Semestre" value={semestre} />
+              <InfoRow 
+                icon="barcode-outline" 
+                label="Código de Estudiante" 
+                value={codigoEstudiante}
+                editable={true}
+                onEdit={() => {
+                  setFormData({...formData, codigoestudiante: codigoEstudiante === 'No registrado' ? '' : codigoEstudiante});
+                  setShowEditModal(true);
+                }}
+              />
+              <InfoRow 
+                icon="book-outline" 
+                label="Semestre" 
+                value={semestre}
+                editable={true}
+                onEdit={() => {
+                  setFormData({...formData, semestre: semestre === 'No registrado' ? '' : semestre});
+                  setShowEditModal(true);
+                }}
+              />
               
               <View style={styles.divider} />
               
               <Text style={styles.cardTitle}>Información Personal</Text>
-              <InfoRow icon="id-card-outline" label="Carnet / CI" value={perfil?.ci || perfil?.carnet} />
-              <InfoRow icon="call-outline" label="Teléfono" value={telefono} />
+              <InfoRow 
+                icon="id-card-outline" 
+                label="Carnet / CI" 
+                value={ci}
+                editable={true}
+                onEdit={() => {
+                  setFormData({...formData, ci: ci === 'No especificado' ? '' : ci});
+                  setShowEditModal(true);
+                }}
+              />
+              <InfoRow 
+                icon="call-outline" 
+                label="Teléfono" 
+                value={telefono}
+                editable={true}
+                onEdit={() => {
+                  setFormData({...formData, telefono: telefono === 'No registrado' ? '' : telefono});
+                  setShowEditModal(true);
+                }}
+              />
               <InfoRow icon="mail-outline" label="Correo Electrónico" value={perfil?.email || perfil?.correo} />
             </View>
 
-            <TouchableOpacity 
-              style={styles.editBtn}
-              onPress={() => Alert.alert('Próximamente', 'La edición de perfil estará disponible pronto.')}
-            >
+            <TouchableOpacity style={styles.editBtn} onPress={handleEditPress}>
               <Ionicons name="create-outline" size={18} color={COLORS.white} />
               <Text style={styles.editBtnText}>Editar Perfil</Text>
             </TouchableOpacity>
           </>
         )}
       </ScrollView>
+
+      {/* Modal de Edición */}
+      <Modal
+        visible={showEditModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowEditModal(false)}
+      >
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
+        >
+          <TouchableWithoutFeedback onPress={() => !saving && setShowEditModal(false)}>
+            <View style={styles.modalOverlay}>
+              <TouchableWithoutFeedback>
+                <View style={styles.modalContent}>
+                  <View style={styles.modalHeader}>
+                    <Text style={styles.modalTitle}>Editar Perfil</Text>
+                    <TouchableOpacity 
+                      onPress={() => !saving && setShowEditModal(false)}
+                      disabled={saving}
+                    >
+                      <Ionicons name="close" size={24} color={COLORS.textSecondary} />
+                    </TouchableOpacity>
+                  </View>
+
+                  <ScrollView style={styles.modalBody}>
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.inputLabel}>Código de Estudiante *</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={formData.codigoestudiante}
+                        onChangeText={(text) => setFormData({...formData, codigoestudiante: text})}
+                        placeholder="Ej: 2023-1234"
+                        placeholderTextColor={COLORS.textSecondary}
+                        editable={!saving}
+                      />
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.inputLabel}>Semestre *</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={formData.semestre}
+                        onChangeText={(text) => setFormData({...formData, semestre: text})}
+                        placeholder="Ej: 5to semestre"
+                        placeholderTextColor={COLORS.textSecondary}
+                        editable={!saving}
+                      />
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.inputLabel}>Teléfono</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={formData.telefono}
+                        onChangeText={(text) => setFormData({...formData, telefono: text})}
+                        placeholder="Ej: 71234567"
+                        placeholderTextColor={COLORS.textSecondary}
+                        keyboardType="phone-pad"
+                        editable={!saving}
+                      />
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.inputLabel}>Carnet / CI</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={formData.ci}
+                        onChangeText={(text) => setFormData({...formData, ci: text})}
+                        placeholder="Ej: 12345678"
+                        placeholderTextColor={COLORS.textSecondary}
+                        editable={!saving}
+                      />
+                    </View>
+                  </ScrollView>
+
+                  <View style={styles.modalFooter}>
+                    <TouchableOpacity
+                      style={[styles.cancelBtn, saving && styles.btnDisabled]}
+                      onPress={() => setShowEditModal(false)}
+                      disabled={saving}
+                    >
+                      <Text style={styles.cancelBtnText}>Cancelar</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity
+                      style={[styles.saveBtn, saving && styles.btnDisabled]}
+                      onPress={handleSaveProfile}
+                      disabled={saving}
+                    >
+                      {saving ? (
+                        <ActivityIndicator size="small" color={COLORS.white} />
+                      ) : (
+                        <>
+                          <Ionicons name="save-outline" size={18} color={COLORS.white} />
+                          <Text style={styles.saveBtnText}>Guardar</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </TouchableWithoutFeedback>
+            </View>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 };
@@ -174,7 +374,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
   },
   infoLabel: { fontSize: 12, color: COLORS.textSecondary, fontWeight: '500' },
-  infoValue: { fontSize: 15, color: COLORS.textPrimary, fontWeight: '600', marginTop: 2 },
+  infoValueContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flex: 1 },
+  infoValue: { fontSize: 15, color: COLORS.textPrimary, fontWeight: '600', marginTop: 2, flex: 1 },
+  editIcon: { padding: 4 },
   
   divider: { height: 1, backgroundColor: COLORS.border, marginVertical: 16 },
 
@@ -184,6 +386,92 @@ const styles = StyleSheet.create({
     shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 4,
   },
   editBtnText: { color: COLORS.white, fontSize: 16, fontWeight: '700' },
+
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: COLORS.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+  },
+  modalBody: {
+    padding: 20,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+    marginBottom: 8,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 15,
+    color: COLORS.textPrimary,
+    backgroundColor: COLORS.background,
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    gap: 12,
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  cancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelBtnText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+  },
+  saveBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  saveBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.white,
+  },
+  btnDisabled: {
+    opacity: 0.5,
+  },
 });
 
 export default PerfilEstudianteScreen;
