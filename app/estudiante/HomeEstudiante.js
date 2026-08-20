@@ -22,7 +22,6 @@ const API_BASE_URL = 'https://unibackend-production.up.railway.app';//const API_
 const TOKEN_KEY    = 'studentAuthToken';
 const USER_DATA_KEY = 'studentUserData';
 
-// ─── Storage helpers ───────────────────────────────────────────────────────────
 const getToken = async () => {
   try {
     return Platform.OS === 'web'
@@ -60,9 +59,6 @@ const clearSession = async () => {
   } catch {}
 };
 
-// Lee el código/semestre/teléfono del estudiante sin importar cuál variante de
-// nombre de campo haya devuelto el backend (algunos endpoints usan snake_case,
-// otros el nombre "pegado" como el resto del proyecto: idestudiante, etc.)
 const getCodigoEstudiante = (u) => u?.codigoestudiante || u?.codigo_estudiante || '';
 const getSemestre        = (u) => u?.semestre || '';
 const getTelefono        = (u) => u?.telefono || '';
@@ -208,8 +204,9 @@ const HomeEstudianteScreen = () => {
   const [eventoPendiente, setEventoPendiente] = useState(null);
   const [formInscripcion, setFormInscripcion] = useState({ codigo_estudiante: '', semestre: '', telefono: '' });
   const [savingInscripcion, setSavingInscripcion] = useState(false);
+  const [datosCompletados, setDatosCompletados] = useState(false);
 
-  // Llama al endpoint de registro para un evento. No toca datos de perfil.
+
   const registrarEnEvento = async (eventId) => {
     const token = await getToken();
     await axios.post(`${API_BASE_URL}/eventos/${eventId}/registrar`, {}, {
@@ -218,29 +215,27 @@ const HomeEstudianteScreen = () => {
   };
 
   const handleInscribir = async (eventId) => {
-    // Si el estudiante ya completó código, semestre y teléfono alguna vez,
-    // no volvemos a preguntar: se inscribe directo.
-    if (tieneDatosCompletos(userData)) {
-      setInscribiendoId(eventId);
-      try {
-        await registrarEnEvento(eventId);
+  // Verificar si tiene datos completos (en userData O si ya los completó en esta sesión)
+  if (tieneDatosCompletos(userData) || datosCompletados) {
+    setInscribiendoId(eventId);
+    try {
+      await registrarEnEvento(eventId);
+      setInscritos(prev => new Set(prev).add(eventId));
+      Alert.alert('✅ Inscrito', 'Te has registrado exitosamente al evento.');
+    } catch (err) {
+      console.error('Error al inscribirse:', err);
+      if (err.response?.status === 409) {
         setInscritos(prev => new Set(prev).add(eventId));
-        Alert.alert('✅ Inscrito', 'Te has registrado exitosamente al evento.');
-      } catch (err) {
-        console.error('Error al inscribirse:', err);
-        if (err.response?.status === 409) {
-          setInscritos(prev => new Set(prev).add(eventId));
-          Alert.alert('Ya estabas inscrito', 'Ya tenías una inscripción registrada para este evento.');
-        } else {
-          Alert.alert('Error', err.response?.data?.message || 'No se pudo completar la inscripción.');
-        }
-      } finally {
-        setInscribiendoId(null);
+        Alert.alert('Ya estabas inscrito', 'Ya tenías una inscripción registrada para este evento.');
+      } else {
+        Alert.alert('Error', err.response?.data?.message || 'No se pudo completar la inscripción.');
       }
-      return;
+    } finally {
+      setInscribiendoId(null);
     }
+    return;
+  }
 
-    // Si falta algún dato, pedimos el formulario (solo pasará esta vez).
     setEventoPendiente(eventId);
     setFormInscripcion({
       codigo_estudiante: getCodigoEstudiante(userData),
@@ -261,37 +256,30 @@ const HomeEstudianteScreen = () => {
   try {
     const token = await getToken();
 
-    // 1. Actualizar los datos del estudiante
     await axios.put(`${API_BASE_URL}/estudiantes/mis-datos-inscripcion`, {
       codigoestudiante: codigo_estudiante, semestre, telefono,
     }, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
-    // 2. Inscribirlo al evento
     await registrarEnEvento(eventoPendiente);
+      const userDataConDatos = {
+      ...userData,
+      codigoestudiante: codigo_estudiante,
+      semestre: semestre,
+      telefono: telefono,
+    };
+     await saveUserData(userDataConDatos);
 
-    // 3. ✅ SOLUCIÓN: Recargar el perfil completo desde el backend
-    const perfilActualizado = await fetchUserProfile();
+     setUserData(userDataConDatos);
     
-    // 4. Actualizar estado con los datos frescos
-    if (perfilActualizado) {
-      setUserData(perfilActualizado);
-    } else {
-      // Fallback: actualizar localmente
-      const userActualizado = {
-        ...userData,
-        codigoestudiante: codigo_estudiante,
-        semestre,
-        telefono,
-      };
-      setUserData(userActualizado);
-      await saveUserData(userActualizado);
-    }
+    // Marcar que los datos fueron completados (para esta sesión)
+    setDatosCompletados(true);
 
     setInscritos(prev => new Set(prev).add(eventoPendiente));
     setShowInscripcionModal(false);
     Alert.alert('✅ Inscrito', 'Te has registrado exitosamente al evento.');
+    
   } catch (err) {
     console.error('Error al inscribirse:', err);
     if (err.response?.status === 409) {
