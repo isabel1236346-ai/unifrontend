@@ -14,7 +14,8 @@ const COLORS = {
   background: '#F9FAFB', white: '#FFFFFF', accent: '#EF4444', success: '#10B981',
 };
 
-const API_BASE_URL = 'https://unibackend-production.up.railway.app';const TOKEN_KEY = 'studentAuthToken';
+const API_BASE_URL = 'https://unibackend-production.up.railway.app';
+const TOKEN_KEY = 'studentAuthToken';
 
 const getToken = async () => {
   try {
@@ -52,36 +53,39 @@ const InscripcionScreen = () => {
   const [error, setError] = useState(null);
 
   const fetchMisInscripciones = useCallback(async () => {
-  setError(null);
-  try {
-    const token = await getToken();
-    if (!token) {
-      setError('Sesión expirada. Inicia sesión nuevamente.');
-      return;
+    setError(null);
+    setLoading(true);
+    try {
+      const token = await getToken();
+      if (!token) {
+        setError('Sesión expirada. Inicia sesión nuevamente.');
+        return;
+      }
+
+      const res = await axios.get(`${API_BASE_URL}/estudiantes/mis-inscripciones`, {
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 10000,
+      });
+
+      const raw = Array.isArray(res.data.eventos) ? res.data.eventos : [];
+      const mapped = raw.map(ev => ({ ...ev, id: ev.idevento }));
+      
+      setEventos(mapped);
+    } catch (err) {
+      console.error('Error al cargar mis inscripciones:', err);
+      if (err.response?.status === 404) {
+        setError('No se encontró el endpoint de inscripciones.');
+      } else {
+        setError('No se pudieron cargar tus eventos. Verifica tu conexión.');
+      }
+    } finally {
+      setLoading(false);
     }
+  }, []);
 
-    const res = await axios.get(`${API_BASE_URL}/estudiantes/mis-inscripciones`, {
-      headers: { Authorization: `Bearer ${token}` },
-      timeout: 10000,
-    });
-
-    const raw = Array.isArray(res.data.eventos) ? res.data.eventos : [];
-    const mapped = raw.map(mapInscripcion).filter(ev => ev.id);
-    setItems(mapped);
-  } catch (err) {
-    console.error('Error al cargar mis inscripciones:', err);
-    if (err.response?.status === 404) {
-      setError('No se encontró el endpoint de inscripciones.');
-    } else {
-      setError('No se pudieron cargar tus eventos. Verifica tu conexión.');
-    }
-  } finally {
-    setLoading(false);
-    setRefreshing(false);
-  }
-}, []);
-
-  useFocusEffect(useCallback(() => { fetchMisInscripciones(); }, [fetchMisInscripciones]));
+  useFocusEffect(useCallback(() => { 
+    fetchMisInscripciones(); 
+  }, [fetchMisInscripciones]));
 
   return (
     <View style={styles.container}>
@@ -109,7 +113,7 @@ const InscripcionScreen = () => {
         ) : (
           <View style={{ gap: 12 }}>
             {eventos.map(ev => (
-              <InscripcionCard key={ev.idevento} evento={ev} />
+              <InscripcionCard key={ev.id} evento={ev} />
             ))}
           </View>
         )}
