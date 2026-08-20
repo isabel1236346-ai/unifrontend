@@ -424,7 +424,7 @@ const fetchMisInscripciones = useCallback(async () => {
     console.error('Error al cargar mis inscripciones:', err);
   }
 }, []);
-const fetchUserProfile = useCallback(async () => {
+const fetchUserProfile = useCallback(async (localFallback) => {
   try {
     const token = await getToken();
     if (!token) return null;
@@ -439,6 +439,11 @@ const fetchUserProfile = useCallback(async () => {
       ...perfil,
       facultad_id: perfil.facultad_id || perfil.academico?.facultad_id,
       facultad_nombre: perfil.facultad || perfil.facultad?.nombre,
+      // Si /profile no trae estos campos (ej. se guardan en otra tabla),
+      // no perdemos lo que ya habíamos guardado localmente.
+      codigoestudiante: getCodigoEstudiante(perfil) || getCodigoEstudiante(localFallback),
+      semestre: getSemestre(perfil) || getSemestre(localFallback),
+      telefono: getTelefono(perfil) || getTelefono(localFallback),
     };
 
     await saveUserData(actualizado);
