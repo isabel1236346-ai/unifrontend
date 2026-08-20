@@ -869,25 +869,29 @@ const HomeAdministradorScreen = () => {
   }, []);
 
   const fetchPredictions = useCallback(async () => {
-    try {
-      const token = await getTokenAsync();
-      if (!token) return;
-      
-      setLoadingPredictions(true);
-      const res = await axios.get(`${API_BASE_URL}/predictions/analysis`, { 
-        headers: { Authorization: `Bearer ${token}` } 
-      });
-      
-      if (res.data.success && Array.isArray(res.data.data)) {
-        // Mostramos solo los próximos 3 eventos para no saturar el dashboard
-        setPrediccionesIA(res.data.data.slice(0, 3));
-      }
-    } catch (error) {
-      console.error('Error al cargar predicciones de IA:', error);
-    } finally {
-      setLoadingPredictions(false);
+  try {
+    const token = await getTokenAsync();
+    if (!token) return;
+    
+    setLoadingPredictions(true);
+    console.log('🔍 Consultando predicciones...');
+    
+    const res = await axios.get(`${API_BASE_URL}/predictions/analysis`, { 
+      headers: { Authorization: `Bearer ${token}` } 
+    });
+    
+    console.log('✅ Respuesta del backend:', res.data);
+    
+    if (res.data.success && Array.isArray(res.data.data)) {
+      setPrediccionesIA(res.data.data.slice(0, 3));
+      console.log(' Predicciones cargadas:', res.data.data.length);
     }
-  }, []);
+  } catch (error) {
+    console.error('❌ Error al cargar predicciones:', error);
+  } finally {
+    setLoadingPredictions(false);
+  }
+}, []);
   const markAsRead = async (notifId) => {
     try {
       const token = await getTokenAsync();
