@@ -263,7 +263,7 @@ const HomeEstudianteScreen = () => {
       setInscritos(new Set());
       
       // Redirigir al login (usa '/login' o '/' según como tengas configurado tu router)
-      router.replace('/login'); 
+      router.replace('/Login'); 
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
       // Forzar redirección incluso si algo falló inesperadamente
