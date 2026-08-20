@@ -611,14 +611,15 @@ const fetchUserProfile = useCallback(async (localFallback) => {
       </ScrollView>
 
       <View style={styles.footer}>
-       <TouchableOpacity onPress={onLogout} style={[styles.minimalDockLogoutButton, { backgroundColor: colors.primary, borderColor: colors.border }]}>
-          <Ionicons name="log-out-outline" size={20} color={colors.white} />
-            <Text style={[styles.minimalDockLogoutButtonText, { color: colors.white }]}>
-               Cerrar Sesión
-            </Text>
-       </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.logoutBtn} 
+            onPress={handleLogout}
+          >
+            <Ionicons name="log-out-outline" size={20} color={COLORS.white} />
+            <Text style={styles.logoutText}>Cerrar Sesión</Text>
+          </TouchableOpacity>
       </View>
-      <Modal visible={showInscripcionModal} animationType="slide" transparent onRequestClose={() => setShowInscripcionModal(false)}>
+        <Modal visible={showInscripcionModal} animationType="slide" transparent onRequestClose={() => setShowInscripcionModal(false)}>
   <View style={modalStyles.overlay}>
     <View style={modalStyles.card}>
       <Text style={modalStyles.title}>Completá tus datos</Text>
