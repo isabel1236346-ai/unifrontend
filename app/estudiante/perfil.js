@@ -177,7 +177,6 @@ const PerfilEstudianteScreen = () => {
               <View style={styles.divider} />
               
               <Text style={styles.cardTitle}>Información Personal</Text>
-              <InfoRow icon="id-card-outline" label="Carnet / CI" value={ci} editable={true} onEdit={handleEditPress} />
               <InfoRow icon="call-outline" label="Teléfono" value={telefono} editable={true} onEdit={handleEditPress} />
               <InfoRow icon="mail-outline" label="Correo Electrónico" value={perfil?.email} />
             </View>
@@ -217,10 +216,7 @@ const PerfilEstudianteScreen = () => {
                       <Text style={styles.inputLabel}>Teléfono</Text>
                       <TextInput style={styles.input} value={formData.telefono} onChangeText={(text) => setFormData({...formData, telefono: text})} placeholder="Ej: 71234567" placeholderTextColor={COLORS.textSecondary} keyboardType="phone-pad" editable={!saving} />
                     </View>
-                    <View style={styles.inputGroup}>
-                      <Text style={styles.inputLabel}>Carnet / CI</Text>
-                      <TextInput style={styles.input} value={formData.ci} onChangeText={(text) => setFormData({...formData, ci: text})} placeholder="Ej: 12345678" placeholderTextColor={COLORS.textSecondary} editable={!saving} />
-                    </View>
+                    
                   </ScrollView>
 
                   <View style={styles.modalFooter}>
