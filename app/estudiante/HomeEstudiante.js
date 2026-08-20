@@ -48,22 +48,20 @@ const saveUserData = async (data) => {
 };
 
 const clearSession = async () => {
-  try {
-    if (Platform.OS === 'web') {
+  if (Platform.OS === 'web') {
+    try {
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem(USER_DATA_KEY);
-    } else {
-      // Usamos .catch() individualmente para que si uno falla, el otro se siga ejecutando
-      await SecureStore.deleteItemAsync(TOKEN_KEY).catch(err => console.warn('Error borrando token:', err));
-      await SecureStore.deleteItemAsync(USER_DATA_KEY).catch(err => console.warn('Error borrando userData:', err));
+    } catch (e) {
+      console.error("Error al eliminar de localStorage en web:", e);
     }
-    console.log('✅ Sesión limpiada correctamente');
-  } catch (error) {
-    console.error('❌ Error grave al limpiar la sesión:', error);
-    // Fallback por si acaso estamos en web pero Platform.OS falló
-    if (typeof window !== 'undefined' && window.localStorage) {
-      window.localStorage.removeItem(TOKEN_KEY);
-      window.localStorage.removeItem(USER_DATA_KEY);
+  } else {
+    try {
+      // .catch() individual para que si uno falla, el otro se siga ejecutando
+      await SecureStore.deleteItemAsync(TOKEN_KEY).catch(err => console.warn(err));
+      await SecureStore.deleteItemAsync(USER_DATA_KEY).catch(err => console.warn(err));
+    } catch (e) {
+      console.error("Error al eliminar de SecureStore en nativo:", e);
     }
   }
 };
@@ -253,6 +251,46 @@ const HomeEstudianteScreen = () => {
     });
     setShowInscripcionModal(true);
   };
+
+  const handleLogout = () => {
+  const performLogout = async () => {
+    try {
+      await clearSession();
+      
+      // Limpiar estados locales para evitar datos residuales o fugas de memoria
+      setUserData(null);
+      setEvents([]);
+      setInscritos(new Set());
+      
+      // Redirigir al login (usa '/login' o '/' según como tengas configurado tu router)
+      router.replace('/login'); 
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
+      // Forzar redirección incluso si algo falló inesperadamente
+      router.replace('/login');
+    }
+  };
+
+  if (Platform.OS === 'web') {
+    if (window.confirm('¿Estás seguro de que deseas cerrar sesión?')) {
+      performLogout();
+    }
+  } else {
+    Alert.alert(
+      'Cerrar Sesión',
+      '¿Estás seguro de que deseas cerrar sesión?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Cerrar Sesión',
+          style: 'destructive',
+          onPress: performLogout,
+        },
+      ],
+      { cancelable: true }
+    );
+  }
+};
 
   const confirmarInscripcion = async () => {
   const { codigo_estudiante, semestre, telefono } = formInscripcion;
@@ -467,28 +505,7 @@ const fetchUserProfile = useCallback(async (localFallback) => {
       }
   }, [userData]);
 
-   const handleLogout = () => {
-    Alert.alert('Cerrar Sesión', '¿Estás seguro de que deseas cerrar sesión?', [
-      { text: 'Cancelar', style: 'cancel' },
-      { 
-        text: 'Cerrar Sesión', 
-        style: 'destructive', 
-        onPress: async () => { 
-          try {
-            console.log('🔄 Iniciando proceso de cierre de sesión...');
-            await clearSession();
-            
-            // Forzamos la navegación y limpiamos cualquier estado residual si es necesario
-            console.log('🚀 Redirigiendo al login...');
-            router.replace('/login');
-          } catch (error) {
-            console.error('❌ Error al cerrar sesión:', error);
-            Alert.alert('Error', 'No se pudo cerrar la sesión. Inténtalo de nuevo.');
-          }
-        } 
-      },
-    ]);
-  };
+
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Buenos días' : hour < 18 ? 'Buenas tardes' : 'Buenas noches';
@@ -594,10 +611,12 @@ const fetchUserProfile = useCallback(async (localFallback) => {
       </ScrollView>
 
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={20} color={COLORS.white} />
-          <Text style={styles.logoutText}>Cerrar Sesión</Text>
-        </TouchableOpacity>
+       <TouchableOpacity onPress={onLogout} style={[styles.minimalDockLogoutButton, { backgroundColor: colors.primary, borderColor: colors.border }]}>
+          <Ionicons name="log-out-outline" size={20} color={colors.white} />
+            <Text style={[styles.minimalDockLogoutButtonText, { color: colors.white }]}>
+               Cerrar Sesión
+            </Text>
+       </TouchableOpacity>
       </View>
       <Modal visible={showInscripcionModal} animationType="slide" transparent onRequestClose={() => setShowInscripcionModal(false)}>
   <View style={modalStyles.overlay}>
