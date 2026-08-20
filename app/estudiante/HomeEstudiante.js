@@ -53,10 +53,19 @@ const clearSession = async () => {
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem(USER_DATA_KEY);
     } else {
-      await SecureStore.deleteItemAsync(TOKEN_KEY);
-      await SecureStore.deleteItemAsync(USER_DATA_KEY);
+      // Usamos .catch() individualmente para que si uno falla, el otro se siga ejecutando
+      await SecureStore.deleteItemAsync(TOKEN_KEY).catch(err => console.warn('Error borrando token:', err));
+      await SecureStore.deleteItemAsync(USER_DATA_KEY).catch(err => console.warn('Error borrando userData:', err));
     }
-  } catch {}
+    console.log('✅ Sesión limpiada correctamente');
+  } catch (error) {
+    console.error('❌ Error grave al limpiar la sesión:', error);
+    // Fallback por si acaso estamos en web pero Platform.OS falló
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.removeItem(TOKEN_KEY);
+      window.localStorage.removeItem(USER_DATA_KEY);
+    }
+  }
 };
 
 const getCodigoEstudiante = (u) => u?.codigoestudiante || u?.codigo_estudiante || '';
@@ -458,10 +467,26 @@ const fetchUserProfile = useCallback(async (localFallback) => {
       }
   }, [userData]);
 
-  const handleLogout = () => {
-    Alert.alert('Cerrar Sesión', '¿Estás seguro?', [
+   const handleLogout = () => {
+    Alert.alert('Cerrar Sesión', '¿Estás seguro de que deseas cerrar sesión?', [
       { text: 'Cancelar', style: 'cancel' },
-      { text: 'Cerrar Sesión', style: 'destructive', onPress: async () => { await clearSession(); router.replace('/login'); } },
+      { 
+        text: 'Cerrar Sesión', 
+        style: 'destructive', 
+        onPress: async () => { 
+          try {
+            console.log('🔄 Iniciando proceso de cierre de sesión...');
+            await clearSession();
+            
+            // Forzamos la navegación y limpiamos cualquier estado residual si es necesario
+            console.log('🚀 Redirigiendo al login...');
+            router.replace('/login');
+          } catch (error) {
+            console.error('❌ Error al cerrar sesión:', error);
+            Alert.alert('Error', 'No se pudo cerrar la sesión. Inténtalo de nuevo.');
+          }
+        } 
+      },
     ]);
   };
 
