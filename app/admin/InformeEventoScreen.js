@@ -935,7 +935,41 @@ const InformeEventoScreen = () => {
         keyExtractor={(item) => String(item.idestudiante)}
         contentContainerStyle={{ padding: 16 }}
         ListEmptyComponent={<Text style={{ textAlign: 'center', color: COLORS.grayText, marginTop: 30 }}>Aún no hay estudiantes inscritos.</Text>}
-        ListHeaderComponent={inscritos.length > 0 ? <Text style={{ marginBottom: 10, color: COLORS.grayText }}>Total: {inscritos.length}</Text> : null}
+        ListHeaderComponent={
+          <View style={styles.eventInfoCard}>
+            <Text style={styles.eventInfoTitle}>{event?.title}</Text>
+            <View style={styles.badgesRow}>
+              <View style={[styles.phaseBadge, { backgroundColor: COLORS.info }]}>
+                <Ionicons name="flag-outline" size={14} color={COLORS.white} />
+                <Text style={styles.phaseBadgeText}>Fase {event?.idfase || 1}</Text>
+              </View>
+              <View style={[styles.phaseBadge, { backgroundColor: event?.status === 'aprobado' ? COLORS.success : COLORS.warning }]}>
+                <Ionicons name={event?.status === 'aprobado' ? 'checkmark-circle' : 'time-outline'} size={14} color={COLORS.white} />
+                <Text style={styles.phaseBadgeText}>{event?.status}</Text>
+              </View>
+            </View>
+
+            <View style={styles.eventInfoDivider} />
+
+            <View style={styles.detailRow}>
+              <Ionicons name="calendar-outline" size={18} color={COLORS.primary} style={styles.detailIcon} />
+              <Text style={styles.eventInfoText}>{event?.date}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Ionicons name="time-outline" size={18} color={COLORS.primary} style={styles.detailIcon} />
+              <Text style={styles.eventInfoText}>{event?.time}</Text>
+            </View>
+            <View style={[styles.detailRow, { marginBottom: 0 }]}>
+              <Ionicons name="location-outline" size={18} color={COLORS.primary} style={styles.detailIcon} />
+              <Text style={styles.eventInfoText}>{event?.location}</Text>
+            </View>
+
+            <View style={styles.inscritosCountPill}>
+              <Ionicons name="people" size={14} color={COLORS.primary} />
+              <Text style={styles.inscritosCountText}>{inscritos.length} estudiante{inscritos.length !== 1 ? 's' : ''} inscrito{inscritos.length !== 1 ? 's' : ''}</Text>
+            </View>
+          </View>
+        }
         renderItem={({ item }) => (
   <View style={styles.committeeMember}>
     <Text style={styles.committeeName}>{item.nombre}</Text>
@@ -1084,7 +1118,36 @@ const styles = StyleSheet.create({
   pdfButton: { flexDirection: 'row', backgroundColor: COLORS.accent, paddingVertical: 14, borderRadius: 12, justifyContent: 'center', alignItems: 'center', gap: 8, marginBottom: 20 },
   pdfButtonText: { color: COLORS.white, fontSize: 16, fontWeight: 'bold' },
   inscritosButton: { flexDirection: 'row', backgroundColor: COLORS.secondary, paddingVertical: 12, borderRadius: 12, justifyContent: 'center', alignItems: 'center', gap: 8, marginBottom: 16 },
-  inscritosButtonText: { color: COLORS.white, fontSize: 15, fontWeight: 'bold' },   
+  inscritosButtonText: { color: COLORS.white, fontSize: 15, fontWeight: 'bold' },
+
+  // Tarjeta de datos del evento dentro del modal de inscritos
+  eventInfoCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },
+      android: { elevation: 2 },
+    }),
+  },
+  eventInfoTitle: { fontSize: 19, fontWeight: 'bold', color: COLORS.darkText, marginBottom: 8 },
+  eventInfoDivider: { height: 1, backgroundColor: COLORS.grayLight, marginVertical: 14 },
+  eventInfoText: { fontSize: 14, color: COLORS.darkText, flex: 1 },
+  inscritosCountPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    backgroundColor: COLORS.grayLight,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginTop: 14,
+  },
+  inscritosCountText: { fontSize: 12, fontWeight: '600', color: COLORS.primary },
 });
 
 export default InformeEventoScreen;
