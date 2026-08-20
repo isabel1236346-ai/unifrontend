@@ -251,27 +251,34 @@ const HomeEstudianteScreen = () => {
   };
 
   const confirmarInscripcion = async () => {
-    const { codigo_estudiante, semestre, telefono } = formInscripcion;
-    if (!codigo_estudiante || !semestre || !telefono) {
-      Alert.alert('Faltan datos', 'Completá código de estudiante, semestre y teléfono.');
-      return;
-    }
+  const { codigo_estudiante, semestre, telefono } = formInscripcion;
+  if (!codigo_estudiante || !semestre || !telefono) {
+    Alert.alert('Faltan datos', 'Completá código de estudiante, semestre y teléfono.');
+    return;
+  }
 
-    setSavingInscripcion(true);
-    try {
-      const token = await getToken();
+  setSavingInscripcion(true);
+  try {
+    const token = await getToken();
 
-      // 1. Actualizar los datos del estudiante (endpoint nuevo, sin restricción de admin)
-      await axios.put(`${API_BASE_URL}/estudiantes/mis-datos-inscripcion`, {
-        codigoestudiante: codigo_estudiante, semestre, telefono,
-      }, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+    // 1. Actualizar los datos del estudiante
+    await axios.put(`${API_BASE_URL}/estudiantes/mis-datos-inscripcion`, {
+      codigoestudiante: codigo_estudiante, semestre, telefono,
+    }, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
-      // 2. Inscribirlo al evento
-      await registrarEnEvento(eventoPendiente);
+    // 2. Inscribirlo al evento
+    await registrarEnEvento(eventoPendiente);
 
-      // 3. Guardar los datos en el perfil local para no volver a preguntar
+    // 3. ✅ SOLUCIÓN: Recargar el perfil completo desde el backend
+    const perfilActualizado = await fetchUserProfile();
+    
+    // 4. Actualizar estado con los datos frescos
+    if (perfilActualizado) {
+      setUserData(perfilActualizado);
+    } else {
+      // Fallback: actualizar localmente
       const userActualizado = {
         ...userData,
         codigoestudiante: codigo_estudiante,
@@ -280,23 +287,24 @@ const HomeEstudianteScreen = () => {
       };
       setUserData(userActualizado);
       await saveUserData(userActualizado);
+    }
 
+    setInscritos(prev => new Set(prev).add(eventoPendiente));
+    setShowInscripcionModal(false);
+    Alert.alert('✅ Inscrito', 'Te has registrado exitosamente al evento.');
+  } catch (err) {
+    console.error('Error al inscribirse:', err);
+    if (err.response?.status === 409) {
       setInscritos(prev => new Set(prev).add(eventoPendiente));
       setShowInscripcionModal(false);
-      Alert.alert('✅ Inscrito', 'Te has registrado exitosamente al evento.');
-    } catch (err) {
-      console.error('Error al inscribirse:', err);
-      if (err.response?.status === 409) {
-        setInscritos(prev => new Set(prev).add(eventoPendiente));
-        setShowInscripcionModal(false);
-        Alert.alert('Ya estabas inscrito', 'Ya tenías una inscripción registrada para este evento.');
-      } else {
-        Alert.alert('Error', err.response?.data?.message || 'No se pudo completar la inscripción.');
-      }
-    } finally {
-      setSavingInscripcion(false);
+      Alert.alert('Ya estabas inscrito', 'Ya tenías una inscripción registrada para este evento.');
+    } else {
+      Alert.alert('Error', err.response?.data?.message || 'No se pudo completar la inscripción.');
     }
-  };
+  } finally {
+    setSavingInscripcion(false);
+  }
+};
 
   useEffect(() => {
     const init = async () => {
