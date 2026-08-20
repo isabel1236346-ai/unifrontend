@@ -345,6 +345,101 @@ const InformeEventoScreen = () => {
       Alert.alert('Error', 'No se pudo generar el PDF: ' + err.message);
     }
   };
+  const buildRegistroParticipantesHtml = () => {
+    const filasEstudiantes = inscritos.map((est, i) => `
+      <tr>
+        <td class="num">${i + 1}</td>
+        <td class="nombre">${est.nombre || ''}</td>
+        <td></td>
+        <td></td>
+        <td>${est.codigoestudiante || ''}</td>
+        <td>${est.carrera || ''}</td>
+        <td>${est.semestre || ''}</td>
+        <td class="correo">${est.email || ''}</td>
+        <td>${est.telefono || ''}</td>
+      </tr>`).join('');
+
+    const filasVacias = Array.from({ length: 15 }).map((_, i) => `
+      <tr>
+        <td class="num">${inscritos.length + i + 1}</td>
+        <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
+      </tr>`).join('');
+
+    return `<html><head><meta charset="UTF-8"><style>
+      @page { margin: 1cm; }
+      body { font-family: Arial, sans-serif; color: #1e293b; }
+      .header { display: flex; align-items: center; justify-content: space-between; border: 1px solid #333; }
+      .header .logo { padding: 10px 16px; font-weight: bold; font-size: 15px; border-right: 1px solid #333; }
+      .header .logo small { display: block; font-weight: normal; font-size: 10px; font-style: italic; }
+      .header .title { flex: 1; text-align: center; font-weight: bold; font-size: 16px; }
+      .header .code { padding: 10px; font-size: 10px; border-left: 1px solid #333; text-align: right; }
+      .infoTable { width: 100%; border-collapse: collapse; margin-top: 4px; }
+      .infoTable td { border: 1px solid #333; padding: 5px 8px; font-size: 12px; }
+      .infoTable td.label { width: 25%; font-weight: bold; background: #f1f1f1; }
+      .mainTable { width: 100%; border-collapse: collapse; margin-top: 10px; }
+      .mainTable th, .mainTable td { border: 1px solid #333; padding: 4px 6px; font-size: 10px; text-align: center; }
+      .mainTable thead .groupRow th { background: #94a3b8; color: #fff; font-size: 11px; }
+      .mainTable thead .colRow th { background: #e2e8f0; font-size: 10px; }
+      .mainTable td.num { width: 3%; }
+      .mainTable td.nombre, .mainTable td.correo { text-align: left; }
+      .mainTable tr { height: 22px; }
+    </style></head><body>
+      <div class="header">
+        <div class="logo">UNIFRANZ<small>Internacionalízate</small></div>
+        <div class="title">REGISTRO DE PARTICIPANTES</div>
+        <div class="code">RG-CI-M<br/>V1.0</div>
+      </div>
+      <table class="infoTable">
+        <tr><td class="label">Nombre del Evento</td><td>${event?.title || ''}</td></tr>
+        <tr><td class="label">Lugar del Evento</td><td>${event?.location || ''}</td></tr>
+        <tr><td class="label">Fecha de Realización</td><td>${event?.date || ''}</td></tr>
+        <tr><td class="label">Hora del Evento</td><td>${event?.time || ''}</td></tr>
+        <tr><td class="label">Responsable del Evento</td><td>${event?.responsable || ''}</td></tr>
+      </table>
+      <table class="mainTable">
+        <thead>
+          <tr class="groupRow">
+            <th rowspan="2">N°</th>
+            <th rowspan="2">Nombre</th>
+            <th colspan="2">Público externo / colaboradores</th>
+            <th colspan="5">Estudiantes</th>
+          </tr>
+          <tr class="colRow">
+            <th>CI</th>
+            <th>Institución</th>
+            <th>Código estudiante</th>
+            <th>Carrera</th>
+            <th>Semestre</th>
+            <th>Correo electrónico</th>
+            <th>Teléfono</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${filasEstudiantes}
+          ${filasVacias}
+        </tbody>
+      </table>
+    </body></html>`;
+  };
+
+  const generarPDFRegistro = async () => {
+    const html = buildRegistroParticipantesHtml();
+    if (Platform.OS === 'web') {
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(`${html}<script>setTimeout(() => { window.print(); window.close(); }, 500);</script>`);
+      printWindow.document.close();
+      return;
+    }
+    try {
+      const result = await Print.printToFileAsync({ html });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(result.uri, { UTI: '.pdf', mimeType: 'application/pdf', dialogTitle: 'Compartir Registro de Participantes' });
+      }
+    } catch (err) {
+      Alert.alert('Error', 'No se pudo generar el PDF: ' + err.message);
+    }
+  };
+
   const verInscritos = async () => {
   setShowInscritos(true);
   setLoadingInscritos(true);
@@ -925,7 +1020,9 @@ const InformeEventoScreen = () => {
         <Ionicons name="close" size={24} color={COLORS.white} />
       </TouchableOpacity>
       <Text style={styles.headerTitle}>Estudiantes Inscritos</Text>
-      <View style={{ width: 24 }} />
+      <TouchableOpacity onPress={generarPDFRegistro}>
+        <Ionicons name="print-outline" size={24} color={COLORS.white} />
+      </TouchableOpacity>
     </View>
     {loadingInscritos ? (
       <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 30 }} />
@@ -964,9 +1061,15 @@ const InformeEventoScreen = () => {
               <Text style={styles.eventInfoText}>{event?.location}</Text>
             </View>
 
-            <View style={styles.inscritosCountPill}>
-              <Ionicons name="people" size={14} color={COLORS.primary} />
-              <Text style={styles.inscritosCountText}>{inscritos.length} estudiante{inscritos.length !== 1 ? 's' : ''} inscrito{inscritos.length !== 1 ? 's' : ''}</Text>
+            <View style={styles.inscritosCardFooter}>
+              <View style={styles.inscritosCountPill}>
+                <Ionicons name="people" size={14} color={COLORS.primary} />
+                <Text style={styles.inscritosCountText}>{inscritos.length} estudiante{inscritos.length !== 1 ? 's' : ''} inscrito{inscritos.length !== 1 ? 's' : ''}</Text>
+              </View>
+              <TouchableOpacity style={styles.pdfRegistroButton} onPress={generarPDFRegistro}>
+                <Ionicons name="print-outline" size={14} color={COLORS.white} />
+                <Text style={styles.pdfRegistroButtonText}>Generar registro PDF</Text>
+              </TouchableOpacity>
             </View>
           </View>
         }
@@ -1136,18 +1239,34 @@ const styles = StyleSheet.create({
   eventInfoTitle: { fontSize: 19, fontWeight: 'bold', color: COLORS.darkText, marginBottom: 8 },
   eventInfoDivider: { height: 1, backgroundColor: COLORS.grayLight, marginVertical: 14 },
   eventInfoText: { fontSize: 14, color: COLORS.darkText, flex: 1 },
+  inscritosCardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 14,
+  },
   inscritosCountPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
     gap: 6,
     backgroundColor: COLORS.grayLight,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
-    marginTop: 14,
   },
   inscritosCountText: { fontSize: 12, fontWeight: '600', color: COLORS.primary },
+  pdfRegistroButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+  },
+  pdfRegistroButtonText: { fontSize: 12, fontWeight: '600', color: COLORS.white },
 });
 
 export default InformeEventoScreen;
