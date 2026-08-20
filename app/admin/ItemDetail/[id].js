@@ -20,7 +20,6 @@ import { useFocusEffect } from '@react-navigation/native';
 // Configuración de API
 const API_BASE_URL = 'https://unibackend-production.up.railway.app';const TOKEN_KEY = 'adminAuthToken';
 
-// Funciones para manejo de tokens
 const getTokenAsync = async () => {
   if (Platform.OS === 'web') {
     try {
@@ -190,7 +189,6 @@ const ItemDetailScreen = () => {
         date: formatDate(eventData.fechaevento),
         time: formatTime(eventData.horaevento),
         location: eventData.lugarevento || 'Ubicación no especificada',
-        organizer: eventData.responsable_evento || 'Organizador no especificado',
         attendees: eventData.participantes_esperados || 'No especificado',
         status: (eventData.estado || 'pendiente').toLowerCase(),
         imageUrl: eventData.imagenUrl || null,
@@ -374,10 +372,6 @@ const ItemDetailScreen = () => {
           <View style={styles.detailRow}>
             <Ionicons name="location-outline" size={20} color={COLORS.primary} style={styles.detailIcon} />
             <Text style={styles.detailText}>Ubicación: {event.location}</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Ionicons name="business-outline" size={20} color={COLORS.primary} style={styles.detailIcon} />
-            <Text style={styles.detailText}>Organizador: {event.organizer}</Text>
           </View>
           <View style={styles.detailRow}>
             <Ionicons name="people-outline" size={20} color={COLORS.primary} style={styles.detailIcon} />
