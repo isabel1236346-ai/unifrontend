@@ -204,7 +204,62 @@ const InformeEventoScreen = () => {
     }
     setter(updated);
   };
-  
+  const handleFinalizarInforme = async () => {
+  Alert.alert(
+    'Finalizar Informe',
+    '¿Estás seguro de finalizar este informe? El evento pasará a Fase 3 y no podrá ser modificado.',
+    [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Sí, finalizar',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const token = await getTokenAsync();
+            if (!token) {
+              Alert.alert('Error', 'No hay sesión activa');
+              return;
+            }
+
+            // Obtener el eventId de los params
+            const eventId = route.params?.eventId || eventId;
+            
+            const response = await axios.put(
+              `${API_BASE_URL}/eventos/${eventId}/finalizar-informe`,
+              {},
+              {
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                }
+              }
+            );
+
+            Alert.alert(
+              '✓ Informe Finalizado',
+              response.data.message || 'El evento ha pasado a Fase 3 correctamente.',
+              [
+                {
+                  text: 'OK',
+                  onPress: () => {
+                    // Opcional: Redirigir o actualizar la vista
+                    router.back(); // o router.push('/admin/EventosCompletados')
+                  }
+                }
+              ]
+            );
+          } catch (error) {
+            console.error('❌ Error al finalizar informe:', error);
+            Alert.alert(
+              'Error',
+              error.response?.data?.message || 'No se pudo finalizar el informe. Intenta de nuevo.'
+            );
+          }
+        }
+      }
+    ]
+  );
+};
   const addRow = (setter, rows) => setter([...rows, emptyEgresoRow()]);
   const removeRow = (setter, rows, index) => setter(rows.filter((_, i) => i !== index));
 
@@ -998,7 +1053,7 @@ const InformeEventoScreen = () => {
             <TouchableOpacity style={styles.draftButton} disabled={saving} onPress={() => handleGuardar('borrador')}>
               {saving ? <ActivityIndicator color={COLORS.primary} /> : <Text style={styles.draftButtonText}>Guardar borrador</Text>}
             </TouchableOpacity>
-            <TouchableOpacity style={styles.finalButton} disabled={saving} onPress={() => handleGuardar('finalizado')}>
+            <TouchableOpacity style={styles.finalButton} disabled={saving} onPress={handleFinalizarInforme}>
               {saving ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.finalButtonText}>Finalizar informe</Text>}
             </TouchableOpacity>
           </View>
