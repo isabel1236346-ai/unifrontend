@@ -18,7 +18,8 @@ import * as SecureStore from 'expo-secure-store';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 
-const API_BASE_URL = 'https://unibackend-production.up.railway.app';const TOKEN_KEY = 'adminAuthToken';
+const API_BASE_URL = 'https://unibackend-production.up.railway.app';
+const TOKEN_KEY = 'adminAuthToken';
 
 const getTokenAsync = async () => {
   if (Platform.OS === 'web') {
@@ -62,6 +63,7 @@ const MESES_ES = [
   'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
   'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
 ];  
+
 const getDaysRemainingDetail = (eventDate) => {
   if (!eventDate) return null;
   const today = new Date(); 
@@ -70,8 +72,6 @@ const getDaysRemainingDetail = (eventDate) => {
   
   if (typeof eventDate === 'string') {
     const trimmed = eventDate.trim();
-    
-    // ✅ Acepta 1 o 2 dígitos y usa constructor local (sin desfase UTC)
     const isoMatch = trimmed.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
     if (isoMatch) {
       const [, year, month, day] = isoMatch;
@@ -82,7 +82,6 @@ const getDaysRemainingDetail = (eventDate) => {
         const [, day, month, year] = dmyMatch;
         eventDateObj = new Date(Number(year), Number(month) - 1, Number(day));
       } else {
-        // Fallback: extraer de ISO para evitar desfase
         const date = new Date(eventDate);
         const isoStr = date.toISOString();
         const match = isoStr.match(/(\d{4})-(\d{2})-(\d{2})/);
@@ -126,30 +125,22 @@ const formatDate = (dateString) => {
   try {
     if (typeof dateString === 'string') {
       const trimmed = dateString.trim();
-      
-      // ✅ Ahora acepta 1 o 2 dígitos para mes y día
       const iso = trimmed.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
       if (iso) {
         return `${Number(iso[3])} de ${MESES_ES[Number(iso[2]) - 1]} de ${iso[1]}`;
       }
-      
-      // ✅ Formato DD/MM/YYYY o D/M/YYYY
       const dmy = trimmed.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
       if (dmy) {
         return `${Number(dmy[1])} de ${MESES_ES[Number(dmy[2]) - 1]} de ${dmy[3]}`;
       }
     }
-    
-    // ✅ Fallback robusto: extrae la fecha en UTC para evitar desfase
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return String(dateString);
-    
     const isoStr = date.toISOString();
     const match = isoStr.match(/(\d{4})-(\d{2})-(\d{2})/);
     if (match) {
       return `${Number(match[3])} de ${MESES_ES[Number(match[2]) - 1]} de ${match[1]}`;
     }
-    
     return date.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
   } catch (error) {
     return String(dateString);
@@ -319,8 +310,49 @@ const EventDetailScreen = () => {
     }
   };
 
+  // ✅ NUEVO: Función para finalizar el evento y pasarlo a Fase 3
+  const handleFinalizarEvento = async () => {
+    Alert.alert(
+      'Finalizar Evento',
+      '¿Estás seguro de que deseas finalizar este evento? Pasará a la Fase 3 y su estado cambiará a "finalizado".',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Sí, finalizar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const token = await getTokenAsync();
+              if (!token) {
+                Alert.alert('Error', 'No hay sesión activa');
+                return;
+              }
+
+              const response = await axios.put(
+                `${API_BASE_URL}/eventos/${event.id}/finalizar-informe`,
+                {},
+                { headers: { Authorization: `Bearer ${token}` } }
+              );
+
+              Alert.alert('✅ Éxito', response.data.message || 'El evento ha pasado a Fase 3 correctamente.');
+              
+              // Actualizar el estado local para reflejar el cambio inmediatamente en la UI
+              setEvent(prev => ({ ...prev, idfase: 3, status: 'finalizado' }));
+              
+            } catch (error) {
+              console.error('❌ Error al finalizar evento:', error);
+              Alert.alert(
+                'Error',
+                error.response?.data?.message || 'No se pudo finalizar el evento. Intenta de nuevo.'
+              );
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const buildEventHtml = () => {
-    // (Lógica de PDF sin cambios, se mantiene igual)
     const actividadesHtml = (titulo, lista) => {
       if (!lista || lista.length === 0) return '';
       return `<div class="section"><div class="section-title">${titulo}</div><ul>${lista.map(a => `<li><strong>${a.nombreActividad || 'Actividad'}</strong><br/>Responsable: ${a.responsable || 'No especificado'}<br/>Inicio: ${formatDate(a.fechaInicio)} — Fin: ${formatDate(a.fechaFin)}</li>`).join('')}</ul></div>`;
@@ -356,6 +388,11 @@ const EventDetailScreen = () => {
   if (loading) return <View style={styles.centered}><ActivityIndicator size="large" color={COLORS.primary} /><Text style={styles.loadingText}>Cargando detalles del evento...</Text></View>;
   if (error) return <View style={styles.centered}><Ionicons name="alert-circle-outline" size={50} color={COLORS.accent} /><Text style={styles.errorText}>{error}</Text><TouchableOpacity style={styles.retryButton} onPress={fetchEventDetails}><Text style={styles.retryButtonText}>Reintentar</Text></TouchableOpacity><TouchableOpacity style={styles.backButton} onPress={() => router.back()}><Text style={styles.backButtonText}>Volver</Text></TouchableOpacity></View>;
   if (!event || Object.keys(event).length === 0) return <View style={styles.centered}><Ionicons name="information-circle-outline" size={50} color={COLORS.grayText} /><Text style={styles.errorText}>No se encontraron datos del evento.</Text><TouchableOpacity style={styles.backButton} onPress={() => router.back()}><Text style={styles.backButtonText}>Volver</Text></TouchableOpacity></View>;
+
+  // ✅ NUEVO: Lógica para mostrar el botón solo el día del evento (o si ya pasó la fecha pero sigue en fase 2 aprobado)
+  const daysRemaining = getDaysRemainingDetail(event.fechaEventoRaw);
+  const isTodayOrPast = daysRemaining !== null && daysRemaining <= 0;
+  const canFinalize = isTodayOrPast && event.status === 'aprobado' && event.idfase === 2;
 
   return (
     <View style={styles.screenContainer}>
@@ -403,10 +440,6 @@ const EventDetailScreen = () => {
             <View style={styles.detailRow}><Ionicons name="person-outline" size={20} color={COLORS.primary} style={styles.detailIcon} /><Text style={styles.detailText}>{event.responsable}</Text></View>
           </View>
         )}
-
-        {/* ========================================== */}
-        {/* SECCIONES MOVIDAS ANTES DE ACTIVIDADES     */}
-        {/* ========================================== */}
 
         {/* 3. Clasificación Estratégica */}
         {event.Clasificacion && (
@@ -489,10 +522,6 @@ const EventDetailScreen = () => {
             ))}
           </View>
         )}
-
-        {/* ========================================== */}
-        {/* FIN DE SECCIONES MOVIDAS                   */}
-        {/* ========================================== */}
 
         {/* 8. Actividades Previas */}
         {event.idfase >= 2 && event.actividadesPrevias && event.actividadesPrevias.length > 0 && (
@@ -577,10 +606,6 @@ const EventDetailScreen = () => {
             {event.layout.nombre && <Text style={styles.layoutName}>{event.layout.nombre}</Text>}
           </View>
         )}
-
-        {/* ========================================== */}
-        {/* LO DEMÁS                                   */}
-        {/* ========================================== */}
 
         {/* Creador */}
         {event.creador && (
@@ -685,6 +710,14 @@ const EventDetailScreen = () => {
 
         {/* Botones de Acción */}
         <View style={styles.actionButtonsContainer}>
+          {/* ✅ NUEVO: Botón para Finalizar Evento (Solo visible el día del evento o después, si está en Fase 2 y aprobado) */}
+          {canFinalize && (
+            <TouchableOpacity style={[styles.nextStepButton, { backgroundColor: COLORS.purple }]} onPress={handleFinalizarEvento}>
+              <Ionicons name="checkmark-done-circle-outline" size={20} color={COLORS.white} />
+              <Text style={styles.nextStepButtonText}>Finalizar Evento (Pasar a Fase 3)</Text>
+            </TouchableOpacity>
+          )}
+
           {event.status === 'aprobado' && (
             <TouchableOpacity style={styles.nextStepButton} onPress={generateEventPDF}>
               <Ionicons name="print-outline" size={20} color={COLORS.white} />
