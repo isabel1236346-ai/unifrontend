@@ -381,6 +381,17 @@ const EventosAprobadosPorFacultad = () => {
             </View>
           </View>
         )}
+        {hasPhase2Events && (
+          <View style={styles.infoBanner}>
+            <Ionicons name="checkmark-circle" size={24} color={COLORS.success} />
+            <View style={styles.bannerText}>
+              <Text style={styles.bannerTitle}> Eventos Completos</Text>
+              <Text style={styles.bannerSubtitle}>
+                El dia del evento se abrira el informe para su actualizacion.
+              </Text>
+            </View>
+          </View>
+        )}
         
         {events.length > 0 && (
           <View style={styles.topStatsContainer}>
