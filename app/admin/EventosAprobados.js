@@ -374,24 +374,14 @@ const EventosAprobadosPorFacultad = () => {
           <View style={styles.infoBanner}>
             <Ionicons name="checkmark-circle" size={24} color={COLORS.success} />
             <View style={styles.bannerText}>
-              <Text style={styles.bannerTitle}>✓ Eventos Listos para Publicar</Text>
+              <Text style={styles.bannerTitle}>Eventos Listos para Publicar</Text>
               <Text style={styles.bannerSubtitle}>
                 Los eventos en Fase 2 han sido aprobados y están listos para ser publicados automáticamente.
               </Text>
             </View>
           </View>
         )}
-        {hasPhase2Events && (
-          <View style={styles.infoBanner}>
-            <Ionicons name="checkmark-circle" size={24} color={COLORS.success} />
-            <View style={styles.bannerText}>
-              <Text style={styles.bannerTitle}> Eventos Completos</Text>
-              <Text style={styles.bannerSubtitle}>
-                El dia del evento se abrira el informe para su actualizacion.
-              </Text>
-            </View>
-          </View>
-        )}
+        
         
         {events.length > 0 && (
           <View style={styles.topStatsContainer}>
@@ -405,6 +395,17 @@ const EventosAprobadosPorFacultad = () => {
               <Ionicons name="school" size={24} color={COLORS.white} />
               <Text style={styles.topStatNumber}>{uniqueFaculties}</Text>
               <Text style={styles.topStatLabel}>Facultades</Text>
+            </View>
+          </View>
+        )}
+        {hasPhase2Events && (
+          <View style={styles.infoBanner}>
+            <Ionicons name="checkmark-circle" size={24} color={COLORS.success} />
+            <View style={styles.bannerText}>
+              <Text style={styles.bannerTitle}> Eventos Completos</Text>
+              <Text style={styles.bannerSubtitle}>
+                El dia del evento se abrira el informe para su actualizacion.
+              </Text>
             </View>
           </View>
         )}
