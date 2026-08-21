@@ -1,4 +1,4 @@
-// EventosAprobadosPorFacultad.js - Versión Corregida y Optimizada
+// EventosAprobadosPorFacultad.js - Versión con Banner y Badge de Fase 2
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
@@ -26,10 +26,10 @@ const TOKEN_KEY = 'adminAuthToken';
 const COLORS = {
   primary: '#E95A0C',
   primaryLight: '#FF7A3D',
-  accent: '#4CAF50',
+  accent: '#4CAF50', // Verde para badges de éxito
   background: '#F8F9FA',
   surface: '#FFFFFF',
-  success: '#2E7D32',
+  success: '#2E7D32', // Verde oscuro para textos/bordes
   warning: '#FFA726',
   info: '#3498db',
   purple: '#9b59b6',
@@ -93,12 +93,8 @@ const isEventPast = (event) => {
 };
 
 const groupEventsByStatusAndFaculty = (events) => {
-  console.log('🔄 [AGRUPANDO] Total de eventos a procesar:', events.length);
-  
   const activos = events.filter(e => !isEventPast(e));
   const pasados = events.filter(e => isEventPast(e));
-  
-  console.log(`📊 [AGRUPANDO] Activos: ${activos.length} | Pasados: ${pasados.length}`);
 
   const sections = [];
   
@@ -194,7 +190,6 @@ const EventosAprobadosPorFacultad = () => {
         },
       });
 
-      console.log('📦 [API RESPONSE] Cantidad de eventos recibidos:', response.data?.length || 0);
       setEvents(response.data || []);
 
     } catch (error) {
@@ -227,7 +222,7 @@ const EventosAprobadosPorFacultad = () => {
   const handleEventPress = (event) => {
     router.push({
       pathname: '/admin/EventDetailUpdateScreen',
-      params: { eventId: event.id || event.idevento } // ✅ CORREGIDO: Fallback a idevento
+      params: { eventId: event.id || event.idevento }
     });
   };
 
@@ -265,12 +260,20 @@ const EventosAprobadosPorFacultad = () => {
             </View>
             
             <View style={styles.badgeContainer}>
-              <View style={[styles.monthBadge, { backgroundColor: COLORS.blue }]}>
+              <View style={[styles.monthBadge, { backgroundColor: isPast ? COLORS.grayMedium : COLORS.blue }]}>
                 <Ionicons name="calendar" size={12} color={COLORS.white} />
                 <Text style={styles.monthBadgeText}>
                   {isPast ? 'Finalizado' : 'Próximo'}
                 </Text>
               </View>
+              
+              {/* ✅ NUEVO: Badge de Fase 2 */}
+              {item.idfase === 2 && !isPast && (
+                <View style={styles.fase2Badge}>
+                  <Ionicons name="checkmark-circle" size={14} color={COLORS.white} />
+                  <Text style={styles.fase2Text}>Listo para publicar</Text>
+                </View>
+              )}
             </View>
           </View>
 
@@ -361,24 +364,42 @@ const EventosAprobadosPorFacultad = () => {
     );
   };
 
-  // ✅ CORREGIDO: Componentes separados para Header y Footer de la lista
-  const renderListHeader = () => (
-    events.length > 0 ? (
-      <View style={styles.topStatsContainer}>
-        <View style={[styles.topStatCard, { backgroundColor: COLORS.primary }]}>
-          <Ionicons name="calendar" size={24} color={COLORS.white} />
-          <Text style={styles.topStatNumber}>{events.length}</Text>
-          <Text style={styles.topStatLabel}>Eventos totales</Text>
-        </View>
+  // ✅ NUEVO: Header con Banner de Fase 2 + Estadísticas
+  const renderListHeader = () => {
+    const hasPhase2Events = events.some(e => e.idfase === 2);
+    
+    return (
+      <>
+        {hasPhase2Events && (
+          <View style={styles.infoBanner}>
+            <Ionicons name="checkmark-circle" size={24} color={COLORS.success} />
+            <View style={styles.bannerText}>
+              <Text style={styles.bannerTitle}>✓ Eventos Listos para Publicar</Text>
+              <Text style={styles.bannerSubtitle}>
+                Los eventos en Fase 2 han sido aprobados y están listos para ser publicados automáticamente.
+              </Text>
+            </View>
+          </View>
+        )}
         
-        <View style={[styles.topStatCard, { backgroundColor: COLORS.accent }]}>
-          <Ionicons name="school" size={24} color={COLORS.white} />
-          <Text style={styles.topStatNumber}>{uniqueFaculties}</Text>
-          <Text style={styles.topStatLabel}>Facultades</Text>
-        </View>
-      </View>
-    ) : null
-  );
+        {events.length > 0 && (
+          <View style={styles.topStatsContainer}>
+            <View style={[styles.topStatCard, { backgroundColor: COLORS.primary }]}>
+              <Ionicons name="calendar" size={24} color={COLORS.white} />
+              <Text style={styles.topStatNumber}>{events.length}</Text>
+              <Text style={styles.topStatLabel}>Eventos totales</Text>
+            </View>
+            
+            <View style={[styles.topStatCard, { backgroundColor: COLORS.accent }]}>
+              <Ionicons name="school" size={24} color={COLORS.white} />
+              <Text style={styles.topStatNumber}>{uniqueFaculties}</Text>
+              <Text style={styles.topStatLabel}>Facultades</Text>
+            </View>
+          </View>
+        )}
+      </>
+    );
+  };
 
   const renderListFooter = () => (
     events.length > 0 ? (
@@ -414,15 +435,13 @@ const EventosAprobadosPorFacultad = () => {
   }
 
   const sections = groupEventsByStatusAndFaculty(events);
-  // ✅ CORREGIDO: Fallback a 'facultad' y cálculo correcto con el objeto completo
   const uniqueFaculties = new Set(events.map(e => e.faculty || e.facultad || 'Sin facultad')).size;
-  const finalizedCount = events.filter(e => isEventPast(e)).length; // ✅ CORREGIDO: Se pasa el objeto 'e', no 'e.date'
+  const finalizedCount = events.filter(e => isEventPast(e)).length;
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
       
-      {/* Header Fijo */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={COLORS.white} />
@@ -447,10 +466,8 @@ const EventosAprobadosPorFacultad = () => {
         </TouchableOpacity>
       </View>
 
-      {/* ✅ CORREGIDO: SectionList como único componente scrollable, eliminando el ScrollView externo */}
       <SectionList
         sections={sections}
-        // ✅ CORREGIDO: Fallback a idevento para evitar claves "undefined" duplicadas
         keyExtractor={(item) => `event-${item.id || item.idevento || Math.random()}`}
         renderItem={renderEventItem}
         renderSectionHeader={renderSectionHeader}
@@ -544,6 +561,35 @@ const styles = StyleSheet.create({
   rotating: {
     transform: [{ rotate: '180deg' }],
   },
+  
+  // ✅ NUEVOS ESTILOS: Banner de Fase 2
+  infoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F5E9',
+    padding: 16,
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.success,
+  },
+  bannerText: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  bannerTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.success,
+    marginBottom: 2,
+  },
+  bannerSubtitle: {
+    fontSize: 12,
+    color: '#558B2F',
+    lineHeight: 16,
+  },
+
   topStatsContainer: {
     flexDirection: 'row',
     paddingHorizontal: 16,
@@ -681,7 +727,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     borderRadius: 16,
     marginBottom: 12,
-    marginHorizontal: 16, // ✅ Ajustado para que el padding lo maneje la tarjeta
+    marginHorizontal: 16,
     overflow: 'hidden',
     flexDirection: 'row',
     ...Platform.select({
@@ -737,7 +783,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.primary,
   },
+  
+  // ✅ ACTUALIZADO: Contenedor de badges para soportar múltiples badges
   badgeContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
     marginTop: 4,
   },
   monthBadge: {
@@ -754,6 +805,23 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.white,
   },
+  
+  // ✅ NUEVO: Estilo del badge de Fase 2
+  fase2Badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.accent,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    gap: 4,
+  },
+  fase2Text: {
+    color: COLORS.white,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+
   infoGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
