@@ -171,13 +171,29 @@ const PerfilEstudianteScreen = () => {
         timeout: 8000,
       });
 
-      console.log('📋 Perfil completo recibido:', res.data);
+      console.log('📋 DATOS COMPLETOS DEL PERFIL:', res.data);
+    console.log('🔔 Campos disponibles:', Object.keys(res.data));
+    
+    // Buscar campos de telegram
+    const telegramFields = Object.keys(res.data).filter(key => 
+      key.toLowerCase().includes('telegram')
+    );
+    console.log('📱 Campos de Telegram encontrados:', telegramFields);
+    
       setPerfil(res.data);
 
-      // Mostrar modal si Telegram está vinculado
-      if (res.data.telegramVinculado) {
-        setTimeout(() => setShowTelegramModal(true), 500);
-      }
+      const estaVinculado = 
+      res.data.telegramVinculado || 
+      res.data.telegram_vinculado || 
+      res.data.vinculadoTelegram ||
+      res.data.telegram?.vinculado ||
+      false;
+      
+    console.log('✅ Telegram vinculado:', estaVinculado);
+    
+      if (estaVinculado) {
+      setTimeout(() => setShowTelegramModal(true), 500);
+    }
     } catch (err) {
       console.error('Error al cargar perfil:', err);
       setError('No se pudo cargar tu perfil. Verifica tu conexión.');
