@@ -315,7 +315,18 @@ const telegramData = {
                 <Text style={styles.facultadBadgeText}>{facultadNombre}</Text>
               </View>
             </View>
-
+          {telegramData.vinculado && (
+            <TouchableOpacity 
+              style={styles.telegramBadge}
+              onPress={() => setShowTelegramModal(true)}
+            >
+              <View style={styles.telegramBadgeIcon}>
+                <Ionicons name="send" size={16} color={COLORS.white} />
+              </View>
+              <Text style={styles.telegramBadgeText}>Telegram Vinculado</Text>
+              <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary} />
+            </TouchableOpacity>
+          )}
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Información Académica</Text>
               <InfoRow icon="barcode-outline" label="Código de Estudiante" value={codigoEstudiante} editable={true} onEdit={handleEditPress} />
@@ -636,6 +647,31 @@ const styles = StyleSheet.create({
   saveBtn: { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
   saveBtnText: { fontSize: 15, fontWeight: '700', color: COLORS.white },
   btnDisabled: { opacity: 0.5 },
+  telegramBadge: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 10,
+  backgroundColor: COLORS.telegramLight,
+  padding: 12,
+  borderRadius: 12,
+  marginBottom: 20,
+  borderWidth: 1,
+  borderColor: '#BBDEFB',
+},
+telegramBadgeIcon: {
+  width: 32,
+  height: 32,
+  borderRadius: 16,
+  backgroundColor: COLORS.telegramBlue,
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+telegramBadgeText: {
+  flex: 1,
+  fontSize: 14,
+  fontWeight: '600',
+  color: COLORS.textPrimary,
+},
 });
 
 export default PerfilEstudianteScreen;
