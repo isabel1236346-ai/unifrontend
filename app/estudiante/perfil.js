@@ -46,75 +46,99 @@ const InfoRow = ({ icon, label, value, editable = false, onEdit }) => (
   </View>
 );
 
-// Componente para la sección de Telegram
-const TelegramSection = ({ telegramData, onUnlink, loading }) => {
-  if (!telegramData?.vinculado) return null;
-
+// Modal de Telegram Vinculado
+const TelegramLinkedModal = ({ visible, onClose, username, onUnlink, unlinking }) => {
   return (
-    <View style={styles.telegramCard}>
-      {/* Header */}
-      <View style={styles.telegramHeader}>
-        <View style={styles.telegramLogoContainer}>
-          <View style={styles.telegramLogo}>
-            <Ionicons name="send" size={28} color={COLORS.white} />
+    <Modal
+      visible={visible}
+      transparent={true}
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <View style={styles.telegramModalOverlay}>
+        <View style={styles.telegramModalContent}>
+          {/* Header con logo */}
+          <View style={styles.telegramModalHeader}>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <Ionicons name="close" size={24} color={COLORS.textSecondary} />
+            </TouchableOpacity>
           </View>
+
+          {/* Logo Telegram */}
+          <View style={styles.telegramLogoContainer}>
+            <View style={styles.telegramLogoCircle}>
+              <Ionicons name="send" size={48} color={COLORS.telegramBlue} />
+            </View>
+          </View>
+
+          {/* Título */}
+          <Text style={styles.telegramModalTitle}>
+            Telegram Vinculado ✓
+          </Text>
+
+          {/* Check verde */}
+          <View style={styles.greenCheckContainer}>
+            <View style={styles.greenCheckCircle}>
+              <Ionicons name="checkmark" size={40} color={COLORS.white} />
+            </View>
+          </View>
+
+          {/* Texto principal */}
+          <Text style={styles.telegramLinkedText}>
+            Tu cuenta está vinculada con Telegram
+          </Text>
+          <Text style={styles.telegramUsername}>
+            {username || '@usuario'}
+          </Text>
+
+          {/* Notificaciones */}
+          <View style={styles.notificationsContainer}>
+            <Text style={styles.notificationsTitle}>
+              Recibirás notificaciones de:
+            </Text>
+
+            <View style={styles.notificationRow}>
+              <View style={styles.smallGreenCheck}>
+                <Ionicons name="checkmark" size={16} color={COLORS.white} />
+              </View>
+              <Text style={styles.notificationText}>
+                Confirmación de inscripciones a eventos
+              </Text>
+            </View>
+
+            <View style={styles.notificationRow}>
+              <View style={styles.smallGreenCheck}>
+                <Ionicons name="checkmark" size={16} color={COLORS.white} />
+              </View>
+              <Text style={styles.notificationText}>
+                Recordatorios de eventos próximos
+              </Text>
+            </View>
+
+            <View style={styles.notificationRow}>
+              <View style={styles.smallGreenCheck}>
+                <Ionicons name="checkmark" size={16} color={COLORS.white} />
+              </View>
+              <Text style={styles.notificationText}>
+                Actualizaciones importantes
+              </Text>
+            </View>
+          </View>
+
+          {/* Botón Desvincular */}
+          <TouchableOpacity
+            style={[styles.unlinkButton, unlinking && styles.unlinkButtonDisabled]}
+            onPress={onUnlink}
+            disabled={unlinking}
+          >
+            <Ionicons name="unlink" size={20} color={COLORS.dangerText} />
+            <Text style={styles.unlinkButtonText}>
+              {unlinking ? 'Procesando...' : 'Desvincular Telegram'}
+            </Text>
+          </TouchableOpacity>
         </View>
-        <View style={styles.telegramTitleContainer}>
-          <Text style={styles.telegramTitle}>Telegram Vinculado</Text>
-          <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
-        </View>
-        <TouchableOpacity style={styles.closeButton} onPress={() => {}} disabled>
-          <Ionicons name="close" size={20} color={COLORS.textSecondary} />
-        </TouchableOpacity>
       </View>
-
-      {/* Status */}
-      <View style={styles.telegramStatus}>
-        <View style={styles.checkCircle}>
-          <Ionicons name="checkmark" size={32} color={COLORS.white} />
-        </View>
-        <Text style={styles.telegramStatusText}>Tu cuenta está vinculada con Telegram</Text>
-        <Text style={styles.telegramUsername}>{telegramData.username || '@usuario'}</Text>
-      </View>
-
-      {/* Notifications */}
-      <View style={styles.notificationsSection}>
-        <Text style={styles.notificationsTitle}>Recibirás notificaciones de:</Text>
-        
-        <View style={styles.notificationItem}>
-          <View style={styles.notificationCheck}>
-            <Ionicons name="checkmark" size={14} color={COLORS.white} />
-          </View>
-          <Text style={styles.notificationText}>Confirmación de inscripciones a eventos</Text>
-        </View>
-
-        <View style={styles.notificationItem}>
-          <View style={styles.notificationCheck}>
-            <Ionicons name="checkmark" size={14} color={COLORS.white} />
-          </View>
-          <Text style={styles.notificationText}>Recordatorios de eventos próximos</Text>
-        </View>
-
-        <View style={styles.notificationItem}>
-          <View style={styles.notificationCheck}>
-            <Ionicons name="checkmark" size={14} color={COLORS.white} />
-          </View>
-          <Text style={styles.notificationText}>Actualizaciones importantes</Text>
-        </View>
-      </View>
-
-      {/* Unlink Button */}
-      <TouchableOpacity 
-        style={[styles.unlinkButton, loading && styles.unlinkButtonDisabled]} 
-        onPress={onUnlink}
-        disabled={loading}
-      >
-        <Ionicons name="unlink" size={18} color={COLORS.dangerText} />
-        <Text style={styles.unlinkButtonText}>
-          {loading ? 'Procesando...' : 'Desvincular Telegram'}
-        </Text>
-      </TouchableOpacity>
-    </View>
+    </Modal>
   );
 };
 
@@ -125,6 +149,7 @@ const PerfilEstudianteScreen = () => {
   const [error, setError] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showTelegramModal, setShowTelegramModal] = useState(false);
   const [telegramUnlinking, setTelegramUnlinking] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -146,8 +171,13 @@ const PerfilEstudianteScreen = () => {
         timeout: 8000,
       });
 
-      console.log(' Perfil completo recibido:', res.data);
+      console.log('📋 Perfil completo recibido:', res.data);
       setPerfil(res.data);
+
+      // Mostrar modal si Telegram está vinculado
+      if (res.data.telegramVinculado) {
+        setTimeout(() => setShowTelegramModal(true), 500);
+      }
     } catch (err) {
       console.error('Error al cargar perfil:', err);
       setError('No se pudo cargar tu perfil. Verifica tu conexión.');
@@ -178,7 +208,8 @@ const PerfilEstudianteScreen = () => {
               );
               
               Alert.alert('✅ Éxito', 'Telegram desvinculado correctamente');
-              fetchPerfil(); // Recargar perfil
+              setShowTelegramModal(false);
+              fetchPerfil();
             } catch (err) {
               console.error('Error al desvincular Telegram:', err);
               Alert.alert('Error', 'No se pudo desvincular Telegram. Inténtalo de nuevo.');
@@ -240,12 +271,6 @@ const PerfilEstudianteScreen = () => {
   const telefono = perfil?.telefono || 'No registrado';
   const ci = perfil?.ci || perfil?.carnet || 'No especificado';
 
-  // Datos de Telegram (ajusta según la estructura de tu backend)
-  const telegramData = {
-    vinculado: perfil?.telegramVinculado || false,
-    username: perfil?.telegramUsername || null
-  };
-
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
@@ -280,13 +305,6 @@ const PerfilEstudianteScreen = () => {
               </View>
             </View>
 
-            {/* Sección de Telegram */}
-            <TelegramSection 
-              telegramData={telegramData}
-              onUnlink={handleUnlinkTelegram}
-              loading={telegramUnlinking}
-            />
-
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Información Académica</Text>
               <InfoRow icon="barcode-outline" label="Código de Estudiante" value={codigoEstudiante} editable={true} onEdit={handleEditPress} />
@@ -306,6 +324,15 @@ const PerfilEstudianteScreen = () => {
           </>
         )}
       </ScrollView>
+
+      {/* Modal de Telegram Vinculado */}
+      <TelegramLinkedModal
+        visible={showTelegramModal}
+        onClose={() => setShowTelegramModal(false)}
+        username={perfil?.telegramUsername}
+        onUnlink={handleUnlinkTelegram}
+        unlinking={telegramUnlinking}
+      />
 
       {/* Modal de Edición */}
       <Modal visible={showEditModal} animationType="slide" transparent={true} onRequestClose={() => setShowEditModal(false)}>
@@ -412,129 +439,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, marginTop: 12 
   },
   facultadBadgeText: { fontSize: 13, color: COLORS.primary, fontWeight: '600' },
-  
-  // Telegram Section Styles
-  telegramCard: {
-    backgroundColor: COLORS.telegramLight,
-    borderRadius: 16,
-    marginBottom: 20,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#BBDEFB',
-  },
-  telegramHeader: {
-    backgroundColor: COLORS.white,
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  telegramLogoContainer: {
-    marginRight: 12,
-  },
-  telegramLogo: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.telegramBlue,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  telegramTitleContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  telegramTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-  },
-  closeButton: {
-    padding: 4,
-  },
-  telegramStatus: {
-    alignItems: 'center',
-    paddingVertical: 24,
-    backgroundColor: COLORS.white,
-  },
-  checkCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: COLORS.success,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  telegramStatusText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.textPrimary,
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  telegramUsername: {
-    fontSize: 15,
-    color: COLORS.textSecondary,
-    fontWeight: '500',
-  },
-  notificationsSection: {
-    backgroundColor: COLORS.white,
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-  },
-  notificationsTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-    marginBottom: 12,
-  },
-  notificationItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 12,
-  },
-  notificationCheck: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: COLORS.success,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  notificationText: {
-    flex: 1,
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    lineHeight: 20,
-  },
-  unlinkButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: COLORS.danger,
-    paddingVertical: 14,
-    margin: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#FECACA',
-  },
-  unlinkButtonDisabled: {
-    opacity: 0.6,
-  },
-  unlinkButtonText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: COLORS.dangerText,
-  },
-  
-  // Resto de estilos
   card: { 
     backgroundColor: COLORS.surface, borderRadius: 16, padding: 20, 
     borderWidth: 1, borderColor: COLORS.border, 
@@ -559,6 +463,154 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3, shadowRadius: 6, elevation: 4 
   },
   editBtnText: { color: COLORS.white, fontSize: 16, fontWeight: '700' },
+  
+  // Telegram Modal Styles
+  telegramModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  telegramModalContent: {
+    backgroundColor: COLORS.white,
+    borderRadius: 24,
+    width: '100%',
+    maxWidth: 400,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  telegramModalHeader: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    zIndex: 1,
+  },
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  telegramLogoContainer: {
+    alignItems: 'center',
+    paddingTop: 40,
+    paddingBottom: 20,
+    backgroundColor: COLORS.telegramLight,
+  },
+  telegramLogoCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: COLORS.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: COLORS.telegramBlue,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  telegramModalTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    textAlign: 'center',
+    marginBottom: 24,
+    marginTop: 8,
+  },
+  greenCheckContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  greenCheckCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: COLORS.success,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: COLORS.success,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  telegramLinkedText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  telegramUsername: {
+    fontSize: 15,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    marginBottom: 32,
+  },
+  notificationsContainer: {
+    backgroundColor: '#F9FAFB',
+    padding: 20,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: COLORS.border,
+  },
+  notificationsTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    marginBottom: 16,
+  },
+  notificationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  smallGreenCheck: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: COLORS.success,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
+  },
+  notificationText: {
+    flex: 1,
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    lineHeight: 20,
+  },
+  unlinkButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: COLORS.danger,
+    paddingVertical: 16,
+    margin: 20,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  unlinkButtonDisabled: {
+    opacity: 0.6,
+  },
+  unlinkButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.dangerText,
+  },
+  
+  // Modal de Edición Styles
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalContent: { backgroundColor: COLORS.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '80%' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: COLORS.border },
