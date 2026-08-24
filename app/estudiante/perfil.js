@@ -159,48 +159,43 @@ const PerfilEstudianteScreen = () => {
     ci: ''
   });
 
-  const fetchPerfil = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const token = await getToken();
-      if (!token) { router.replace('/login'); return; }
+const fetchPerfil = async () => {
+  setLoading(true);
+  setError(null);
+  try {
+    const token = await getToken();
+    if (!token) { router.replace('/login'); return; }
 
-      const res = await axios.get(`${API_BASE_URL}/profile`, {
-        headers: { Authorization: `Bearer ${token}` },
-        timeout: 8000,
-      });
+    const res = await axios.get(`${API_BASE_URL}/profile`, {
+      headers: { Authorization: `Bearer ${token}` },
+      timeout: 8000,
+    });
 
-      console.log('📋 DATOS COMPLETOS DEL PERFIL:', res.data);
-    console.log('🔔 Campos disponibles:', Object.keys(res.data));
-    
-    // Buscar campos de telegram
-    const telegramFields = Object.keys(res.data).filter(key => 
-      key.toLowerCase().includes('telegram')
-    );
-    console.log('📱 Campos de Telegram encontrados:', telegramFields);
-    
-      setPerfil(res.data);
+    console.log('📋 Perfil completo recibido:', res.data);
+    setPerfil(res.data);
 
-      const estaVinculado = 
-      res.data.telegramVinculado || 
-      res.data.telegram_vinculado || 
-      res.data.vinculadoTelegram ||
-      res.data.telegram?.vinculado ||
-      false;
-      
-    console.log('✅ Telegram vinculado:', estaVinculado);
+    // ✅ CORRECCIÓN: Verificar si Telegram está vinculado
+    // Si existe telegram_chat_id o telegram_username, está vinculado
+    const tieneTelegramVinculado = !!(res.data.telegram_chat_id || res.data.telegram_username);
     
-      if (estaVinculado) {
+    console.log('🔔 Telegram vinculado:', tieneTelegramVinculado);
+    console.log('👤 Telegram username:', res.data.telegram_username);
+    
+    if (tieneTelegramVinculado) {
+      // Mostrar el modal después de un pequeño delay
       setTimeout(() => setShowTelegramModal(true), 500);
     }
-    } catch (err) {
-      console.error('Error al cargar perfil:', err);
-      setError('No se pudo cargar tu perfil. Verifica tu conexión.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  } catch (err) {
+    console.error('Error al cargar perfil:', err);
+    setError('No se pudo cargar tu perfil. Verifica tu conexión.');
+  } finally {
+    setLoading(false);
+  }
+};
+const telegramData = {
+  vinculado: !!(perfil?.telegram_chat_id || perfil?.telegram_username),
+  username: perfil?.telegram_username || null
+};
 
   useEffect(() => { fetchPerfil(); }, []);
 
